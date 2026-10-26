@@ -1,0 +1,19 @@
+ZONA 233 — Archivos para publicar el sitio
+==========================================
+
+Qué hay en esta carpeta
+- index.html .......... la página completa (portada, línea de tiempo, mapa y Quiénes somos)
+- assets/img/ ......... mapa de Resistencia y logos
+- assets/video/ ....... logo animado de la portada (mp4 y webm)
+
+Cómo publicarlo
+Se sube la carpeta tal cual: index.html junto a la carpeta assets, sin cambiar nombres ni rutas.
+Funciona en cualquier hosting de archivos estáticos. Opciones simples:
+- Netlify Drop (app.netlify.com/drop): se arrastra la carpeta y da un link al instante.
+- GitHub Pages o Vercel: subiendo estos archivos a un repositorio.
+- El servidor de la facultad: se copian estos archivos a la carpeta pública que les indiquen.
+También se puede abrir index.html directamente en el navegador para probarlo.
+
+Antes de difundirlo
+- Mapbox: el sitio no usa el token de Mapbox (el mapa es una imagen en assets/img), así que no queda expuesto en el código.
+- Los textos e imágenes pendientes se cargan en la planilla "Zona233_datos_web.xlsx"; con la planilla actualizada se regenera index.html.

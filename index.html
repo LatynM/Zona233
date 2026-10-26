@@ -1,6 +1,13 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<meta name="claude:viewport-fit-sides" content="cover">
-<title>Zona 233 — Prototipo</title>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zona 233</title>
+<meta name="description" content="La red clandestina de la dictadura en Resistencia. Documental interactivo sobre el Área 233.">
+<meta property="og:title" content="Zona 233">
+<meta property="og:description" content="La red clandestina de la dictadura en Resistencia.">
+<style>[hidden]{display:none!important} img{max-width:100%}</style>
 <style>
   /* Capas: marco de legajo con barra superior fija + una grilla central donde
      cuatro vistas (splash, línea de tiempo, mapa, quiénes somos) se deslizan
@@ -15,11 +22,15 @@
     --line-strong: rgba(241,233,254,0.22);
     --ink:#ece4d8;
     --ink-dim:#9c9387;
-    --ink-faint:#6b6358;
+    --ink-faint:#948b7e;   /* antes #6b6358: 2.9:1 sobre las tarjetas, ahora 5.1:1 */
     --accent:#8a1a1c;
     --accent-bright:#c62a2c;
     --accent-muted:#4a3330;
     --paper:#f1e9fe;
+    --pin-outline:#000000;   /* marco negro, muy fino, de todos los pines (activos e inactivos) */
+    --accent-dim:#501112;   /* el mismo rojo del proyecto, más oscuro (misma tonalidad y saturación): sitios aún sin reconstruir */
+    --accent-text:#e65a57;  /* el rojo del proyecto, aclarado solo para texto chico (>4.5:1) */
+    --fs-xs:12px; --fs-sm:14px; --fs-md:16px; --fs-lg:18px; --fs-xl:24px; --fs-2xl:32px;
     --font-display:'Special Elite','Courier New',monospace;
     --font-body:'Courier Prime','Courier New',monospace;
     --font-ui:'Archivo Narrow','Arial Narrow',sans-serif;
@@ -36,7 +47,9 @@
     -webkit-font-smoothing:antialiased;
   }
   h1,h2,h3{ margin:0; text-wrap:balance; }
-  button{ font-family:inherit; }
+  button{ font-family:inherit; -webkit-tap-highlight-color:transparent; }
+  :focus-visible{ outline:2px solid var(--paper); outline-offset:3px; }
+  ::selection{ background:var(--accent); color:var(--paper); }
   @media (prefers-reduced-motion: reduce){
     *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
   }
@@ -85,26 +98,27 @@
   }
   .topbar.is-visible{ display:flex; }
   .topbar-logo{
-    font-family:var(--font-display); font-size:14px; letter-spacing:.08em; white-space:nowrap;
+    font-family:var(--font-display); font-size:var(--fs-md); letter-spacing:.08em; white-space:nowrap;
     background:none; border:none; padding:0; cursor:pointer; color:var(--ink);
     transition:opacity .2s ease;
   }
   .topbar-logo:hover{ opacity:.8; }
   .topbar-logo span{ color:var(--accent-bright); }
+  .topbar-logo img{ display:block; height:26px; width:auto; }
   .topbar-right{ display:flex; align-items:center; gap:14px; }
-  .topbar-slot{ font-family:var(--font-ui); font-size:12px; letter-spacing:.06em; color:var(--ink-dim); display:flex; align-items:center; gap:10px; font-variant-numeric:tabular-nums; }
+  .topbar-slot{ font-family:var(--font-ui); font-size:var(--fs-sm); letter-spacing:.06em; color:var(--ink-dim); display:flex; align-items:center; gap:10px; font-variant-numeric:tabular-nums; }
   .topbar-back{
     background:none; border:none; cursor:pointer;
     color:var(--ink-faint); font-family:inherit;
-    font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; padding:4px 0;
+    font-size:var(--fs-xs); letter-spacing:.08em; text-transform:uppercase; padding:10px 0;
     transition:color .2s ease;
   }
   .topbar-back:hover{ color:var(--ink-dim); }
   .sound-toggle{
     flex:0 0 auto;
-    width:26px; height:26px;
+    width:36px; height:36px;
     background:none; border:1px solid var(--line-strong); color:var(--ink-dim);
-    font-size:12px; cursor:pointer;
+    font-size:var(--fs-sm); cursor:pointer;
     display:flex; align-items:center; justify-content:center;
     transition:color .2s ease, border-color .2s ease;
   }
@@ -121,13 +135,57 @@
   .screen[data-state="off-right"]{ transform:translateX(100%); opacity:0; z-index:1; pointer-events:none; }
   .screen[data-state="off-left"]{ transform:translateX(-100%); opacity:0; z-index:1; pointer-events:none; }
   .screen[data-state="hidden"]{ display:none; }
+  /* Pase línea de tiempo ⇄ mapa: la tarjeta se hunde hacia adelante; el mapa se aleja al volver */
+  .screen[data-state="dive"]{ transform:scale(1.06); opacity:0; z-index:1; pointer-events:none; transition: transform .38s ease, opacity .24s ease; }
+  .screen[data-state="recede"]{ transform:scale(.97); opacity:0; z-index:1; pointer-events:none; transition: transform .38s ease, opacity .3s ease; }
+  /* el mapa y los pines entran juntos, con el mismo acercamiento, para que los pines no se despeguen */
+  #mapa.map-intro .map-svg{ animation: mapIn .7s cubic-bezier(.2,.7,.2,1) both; transform-origin:50% 50%; }
+  #mapa.map-intro .map-subheader,
+  #mapa.map-intro .map-footer,
+  #mapa.map-intro .drawer-trigger{ animation: introUp .35s ease .3s both; }
+  @keyframes mapIn{
+    from{ transform:scale(1.14); filter:blur(8px) brightness(.55); opacity:0; }
+    to{ transform:none; filter:none; opacity:1; }
+  }
+  @keyframes introFade{ from{ opacity:0; } to{ opacity:1; } }
+  /* Entrada a la línea de tiempo desde la portada: la tarjeta se apoya, el año se sella,
+     la línea se traza y los años aparecen uno tras otro. */
+  #timeline.tl-intro .card{ animation: cardIn .5s cubic-bezier(.2,.8,.2,1) .26s both; }
+  #timeline.tl-intro .card-year-stamp{ animation: stampIn .42s cubic-bezier(.3,1.5,.5,1) .62s both; }
+  #timeline.tl-intro .nav-arrow{ animation: introFade .4s ease .7s both; }
+  #timeline.tl-intro .tl-track-inner::before,
+  #timeline.tl-intro .tl-track-inner::after{ animation: lineDraw .7s cubic-bezier(.6,0,.2,1) .3s both; transform-origin:left center; }
+  #timeline.tl-intro .tl-stop{ animation: introUp .32s ease both; animation-delay: calc(440ms + var(--i, 0) * 45ms); }
+  #timeline.tl-intro .tl-center-caret{ animation: introFade .3s ease .7s both; }
+  @keyframes cardIn{
+    from{ opacity:0; transform:translateY(28px) scale(.97); }
+    to{ opacity:1; transform:none; }
+  }
+  @keyframes stampIn{
+    0%{ opacity:0; transform:scale(1.9) rotate(-11deg); }
+    60%{ opacity:1; transform:scale(.94) rotate(-2deg); }
+    100%{ opacity:1; transform:rotate(-3deg); }
+  }
+  /* Pase entre tarjetas: la actual sale hacia un lado, la nueva entra del otro y el año se sella */
+  .card.card-out-next{ animation: cardOutNext .18s ease-in both; }
+  .card.card-out-prev{ animation: cardOutPrev .18s ease-in both; }
+  .card.card-in-next{ animation: cardInNext .34s cubic-bezier(.2,.8,.2,1) both; }
+  .card.card-in-prev{ animation: cardInPrev .34s cubic-bezier(.2,.8,.2,1) both; }
+  .card-year-stamp.stamp-anim{ animation: stampIn .42s cubic-bezier(.3,1.5,.5,1) .16s both; }
+  @keyframes cardOutNext{ to{ opacity:0; transform:translateX(-36px); } }
+  @keyframes cardOutPrev{ to{ opacity:0; transform:translateX(36px); } }
+  @keyframes cardInNext{ from{ opacity:0; transform:translateX(36px); } to{ opacity:1; transform:none; } }
+  @keyframes cardInPrev{ from{ opacity:0; transform:translateX(-36px); } to{ opacity:1; transform:none; } }
+  @keyframes lineDraw{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+  .topbar.is-visible{ animation: introFade .4s ease both; }
+  @keyframes introUp{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
 
-  .proto-tag{
+  .proto-tag{ pointer-events:none;
     position:fixed; z-index:50;
     bottom: max(10px, env(safe-area-inset-bottom, 0px));
     left: max(12px, env(safe-area-inset-left, 0px));
     font-family:var(--font-ui);
-    font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+    font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase;
     color: var(--ink-faint);
     border:1px solid var(--line-strong);
     padding:4px 8px;
@@ -137,12 +195,21 @@
   /* ===================== SPLASH ===================== */
   #splash{
     align-items:center; justify-content:center;
-    background: radial-gradient(ellipse at 50% -10%, rgba(138,26,28,.22), transparent 55%);
+    background: radial-gradient(ellipse at 50% -10%, rgba(138,26,28,.22), transparent 55%), var(--bg);
     padding: calc(24px + env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-left,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-right,0px));
     text-align:center;
   }
   .splash-inner{ display:flex; flex-direction:column; align-items:center; gap:22px; max-width:420px; }
-  .fingerprint{ width:46px; height:46px; opacity:.85; }
+  /* Logos institucionales: chicos, al pie de la portada, sin competir con el logo del proyecto */
+  .splash-inst{
+    position:absolute; left:0; right:0; bottom:calc(20px + env(safe-area-inset-bottom,0px));
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:14px 30px;
+    padding:0 max(16px, env(safe-area-inset-left,0px)) 0 max(16px, env(safe-area-inset-right,0px));
+    pointer-events:none;
+  }
+  .splash-inst img{ display:block; height:28px; width:auto; opacity:.6; }
+  @media (max-height:640px){ .splash-inst{ position:static; margin-top:28px; } }
+  .splash-logo{ display:block; width:min(72vw, 400px); height:auto; mix-blend-mode:lighten; }
   .logo-wrap{ display:flex; flex-direction:column; align-items:center; gap:2px; }
   .logo-line{
     font-family:var(--font-display);
@@ -166,10 +233,10 @@
   @keyframes blink{ 50%{ opacity:0; } }
   .tagline{
     font-family:var(--font-ui);
-    font-size:13px;
-    letter-spacing:.04em;
+    font-size:var(--fs-sm);
+    letter-spacing:.04em; line-height:1.6;
     color:var(--ink-dim);
-    max-width:320px;
+    max-width:340px;
   }
   .tagline b{ color:var(--ink); font-weight:600; }
   .start-btn{
@@ -178,8 +245,8 @@
     color:var(--paper);
     border:1px solid var(--accent-bright);
     font-family:var(--font-ui);
-    font-size:15px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-    padding:14px 30px;
+    font-size:var(--fs-md); font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    padding:14px 30px; min-height:48px;
     cursor:pointer;
     transition: background .2s ease, transform .15s ease;
   }
@@ -190,13 +257,13 @@
     margin-top:24px;
     background:none; border:none; cursor:pointer;
     font-family:var(--font-ui);
-    font-size:11px; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--ink-faint);
+    font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-dim);
     border-bottom:1px solid var(--line-strong);
-    padding:0 0 2px;
+    padding:10px 0 4px;
     transition:color .2s ease, border-color .2s ease;
   }
-  .about-link:hover{ color:var(--ink-dim); border-color:var(--ink-dim); }
+  .about-link:hover{ color:var(--ink); border-color:var(--ink-dim); }
 
   /* ===================== TIMELINE ===================== */
   #timeline{ background:transparent; }
@@ -213,8 +280,8 @@
     z-index:3;
     background:none; border:none;
     color:var(--ink-dim);
-    font-size:34px; line-height:1;
-    padding:14px 10px;
+    font-size:var(--fs-2xl); line-height:1;
+    width:48px; height:64px; padding:0;
     cursor:pointer;
     transition: color .2s ease;
   }
@@ -225,7 +292,7 @@
 
   .card{
     width:100%; max-width:min(94vw, 960px);
-    height:min(66vh, 580px);
+    height:min(72vh, 640px);
     display:grid;
     grid-template-columns: 1fr 2fr;
     border:1px solid var(--line-strong);
@@ -253,26 +320,27 @@
   }
   .card-media-label{
     font-family:var(--font-ui);
-    font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+    font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase;
     color:var(--ink-faint);
-    padding:8px 10px;
+    padding:10px 12px;
   }
 
   .card-body{
     padding:24px 26px;
     display:flex; flex-direction:column; gap:12px;
-    overflow-y:auto; min-width:0;
+    overflow:hidden; min-width:0; min-height:0;
   }
   .card-year-stamp{
     align-self:flex-start;
     position:relative;
     font-family:var(--font-display);
-    font-size:14px; letter-spacing:.1em;
-    color:var(--accent-bright);
+    font-size:var(--fs-xl); letter-spacing:.12em; line-height:1;
+    color:var(--accent-text);
     border:2px solid var(--accent-bright);
-    padding:4px 11px;
+    padding:8px 14px 6px;
     transform:rotate(-3deg);
   }
+  .card-year-stamp.is-long{ font-size:var(--fs-lg); letter-spacing:.08em; }
   .card-year-stamp::after{
     content:"";
     position:absolute; inset:2px;
@@ -282,25 +350,39 @@
   }
   .card-title{
     font-family:var(--font-display);
-    font-size:clamp(19px,2.6vw,24px);
-    line-height:1.25;
+    font-size:clamp(24px,3vw,var(--fs-2xl));
+    line-height:1.2;
   }
+  /* Solo el texto se desliza si es largo: año, título y botón quedan siempre a la vista */
   .card-text{
-    font-size:14px; line-height:1.7; color:var(--ink-dim);
+    flex:1 1 auto; min-height:0; overflow-y:auto;
+    font-size:var(--fs-md); line-height:1.7; max-width:62ch; color:var(--ink-dim);
+    padding-right:10px;
   }
+  .card-text.is-scrollable{
+    -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+            mask-image:linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+    padding-bottom:24px;
+  }
+  .card-text p{ margin:0 0 12px; }
+  .card-text ul{ list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .card-text li{ position:relative; padding-left:20px; }
+  .card-text li::before{ content:"—"; position:absolute; left:0; color:var(--accent-text); }
+  .card-text > :last-child{ margin-bottom:0; }
+  .card-cta{ flex:0 0 auto; }
   .card-cta{
     align-self:flex-start;
     margin-top:auto;
     background:transparent;
-    color:var(--accent-bright);
+    color:var(--accent-text);
     border:1px solid var(--accent-bright);
     font-family:var(--font-ui);
-    font-size:12.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
-    padding:11px 15px;
+    font-size:var(--fs-sm); font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    padding:12px 16px; min-height:44px;
     cursor:pointer;
     transition: background .2s ease, color .2s ease;
   }
-  .card-cta:hover{ background:var(--accent-bright); color:var(--bg); }
+  .card-cta:hover{ background:var(--accent); color:var(--paper); }
   .card-cta[hidden]{ display:none; }
 
   @media (max-width:620px){
@@ -320,6 +402,9 @@
   .tl-track-viewport{
     position:relative;
     overflow:hidden;
+    /* los años se desvanecen hacia los bordes de la pantalla en lugar de cortarse */
+    -webkit-mask-image:linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+            mask-image:linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
     height:56px;
     padding: 12px max(16px, env(safe-area-inset-left,0px)) 0 max(16px, env(safe-area-inset-right,0px));
   }
@@ -334,9 +419,19 @@
     transition: transform .45s cubic-bezier(.65,0,.35,1);
     white-space:nowrap;
   }
+  /* La línea entra con un fundido desde antes del primer hito y, después de "Ahora",
+     sigue punteada hasta desvanecerse: las causas siguen abiertas. */
   .tl-track-inner::before{
-    content:""; position:absolute; left:0; right:0; top:4px; height:1px;
-    background:var(--line-strong); z-index:0;
+    content:""; position:absolute; left:-160px; right:0; top:8px; height:1px;
+    background:linear-gradient(to right, transparent, var(--line-strong) 160px);
+    z-index:0;
+  }
+  .tl-track-inner::after{
+    content:""; position:absolute; left:100%; width:200px; top:8px; height:1px;
+    background:repeating-linear-gradient(to right, var(--line-strong) 0 5px, transparent 5px 11px);
+    -webkit-mask-image:linear-gradient(to right, #000, transparent);
+            mask-image:linear-gradient(to right, #000, transparent);
+    z-index:0;
   }
   .tl-stop{
     position:relative; z-index:1;
@@ -358,7 +453,7 @@
     box-shadow:0 0 0 3px rgba(198,42,44,.25);
   }
   .tl-stop[data-locked="true"]{ opacity:.6; }
-  .tl-year{ font-size:11px; letter-spacing:.04em; }
+  .tl-year{ font-size:var(--fs-xs); letter-spacing:.06em; }
   .tl-stop[data-current="true"] .tl-year{ color:var(--ink); font-weight:600; }
   .tl-year.tl-redacted{
     display:inline-block;
@@ -370,42 +465,63 @@
   /* ===================== MAPA ===================== */
   #mapa{ background:transparent; }
 
+  /* El mapa ocupa toda la pantalla (sangrado completo); el encabezado y el pie flotan encima. */
   .map-subheader{
+    position:relative; z-index:2; pointer-events:none;
     flex:0 0 auto;
     display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
-    padding: 12px max(16px, env(safe-area-inset-left,0px)) 10px max(16px, env(safe-area-inset-right,0px));
-    border-bottom:1px solid var(--line);
+    padding: 14px max(16px, env(safe-area-inset-left,0px)) 34px max(16px, env(safe-area-inset-right,0px));
+    background:linear-gradient(to bottom, rgba(11,10,9,.88), rgba(11,10,9,0));
   }
-  .map-eyebrow{ font-family:var(--font-ui); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-bright); white-space:nowrap; }
-  .map-title{ font-family:var(--font-display); font-size:14px; }
+  .map-eyebrow{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); white-space:nowrap; }
+  .map-title{ font-family:var(--font-display); font-size:var(--fs-md); }
 
   .map-stage{
-    position:relative;
-    flex:1 1 auto; min-height:0;
-    display:flex; align-items:center; justify-content:center;
-    padding:16px;
+    position:absolute; inset:0;   /* sin z-index: así los marcadores quedan por encima del encabezado y el pie */
+    background:var(--bg-raised);
   }
+  /* Viñeta: el mapa se funde con el color de la página en los bordes.
+     Está entre el mapa y los marcadores, así que no los oscurece. */
+  .map-vignette{
+    position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse at center, rgba(11,10,9,0) 55%, rgba(11,10,9,.7) 100%);
+  }
+  .map-svg-markers{ z-index:3; pointer-events:none; }
+  .map-svg-markers .map-marker{ pointer-events:auto; }
+  .map-bg-img{ filter: grayscale(1) sepia(.3) contrast(1.05) brightness(.92); }
   .map-provisional{
-    position:absolute; left: max(14px, env(safe-area-inset-left,0px)); top:14px;
-    font-family:var(--font-ui); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase;
+    position:absolute; z-index:3; left: max(14px, env(safe-area-inset-left,0px)); top:64px;
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase;
     color:var(--ink-faint); border:1px dashed var(--line-strong); padding:3px 7px;
   }
-  .map-svg{ width:100%; height:100%; max-width:640px; }
+  .map-svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
   .map-marker{ cursor:pointer; }
-  .map-marker circle.pulse{ animation: pulse 2.4s ease-in-out infinite; }
-  @keyframes pulse{
-    0%,100%{ opacity:.35; r:11; }
-    50%{ opacity:0; r:17; }
+  .map-marker:focus{ outline:none; }
+  .map-marker:focus-visible .pin-path{ stroke:var(--paper); stroke-width:6; }
+  .map-marker:hover .pin-path{ filter:brightness(1.18); }
+  /* Encendido de los sitios de la causa: el pin pasa a rojo pleno y suelta un brillo que se apaga, una sola vez */
+  .pin-path{ transition: fill .35s ease; }
+  .pin-glow{ opacity:0; pointer-events:none; }
+  .map-marker.lighting .pin-glow{ animation: pinGlow .9s ease-out both; }
+  @keyframes pinGlow{ 0%{ opacity:0; } 25%{ opacity:.8; } 100%{ opacity:0; } }
+  /* Los nombres sobre el mapa aparecen solo al pasar el cursor o al elegir el sitio,
+     porque varios CCD están muy cerca entre sí y se pisarían. */
+  .map-label{ opacity:0; pointer-events:none; transition:opacity .15s ease; }
+  .map-label.is-on{ opacity:1; }
+  /* Etiqueta compacta: placa sobria con marca roja a la izquierda y línea guía hacia el pin */
+  .map-label .plate{ fill:rgba(11,10,9,.9); stroke:var(--line-strong); stroke-width:1; vector-effect:non-scaling-stroke; }
+  .map-label .tick{ fill:var(--accent-bright); }
+  .map-label text{
+    font-family:var(--font-display); letter-spacing:.04em;
+    fill:var(--paper);
   }
-  .map-marker text{ font-family:var(--font-ui); font-size:7.5px; letter-spacing:.02em; fill:var(--ink-dim); }
-  .map-marker[data-selected="true"] text{ fill:var(--ink); font-weight:700; }
 
   .drawer-trigger{
-    position:absolute; top:14px; right: max(14px, env(safe-area-inset-right,0px));
+    position:absolute; z-index:3; top:14px; right: max(14px, env(safe-area-inset-right,0px));
     display:flex; align-items:center; gap:7px;
-    background:var(--bg-raised); border:1px solid var(--accent); color:var(--accent-bright);
-    font-family:var(--font-ui); font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
-    padding:8px 12px; cursor:pointer;
+    background:var(--bg-raised); border:1px solid var(--accent); color:var(--accent-text);
+    font-family:var(--font-ui); font-size:var(--fs-xs); font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+    padding:10px 14px; min-height:40px; cursor:pointer;
     transition: background .2s ease, color .2s ease;
   }
   .drawer-trigger:hover{ background:var(--accent); color:var(--paper); }
@@ -418,19 +534,22 @@
   }
 
   .map-footer{
+    position:relative; z-index:2; margin-top:auto; pointer-events:none;
     flex:0 0 auto;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding: 14px max(16px, env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));
-    border-top:1px solid var(--line);
-    background:var(--bg-raised);
+    display:flex; align-items:center; justify-content:flex-end; gap:12px;
+    padding: 40px max(16px, env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));
+    background:linear-gradient(to top, rgba(11,10,9,.92), rgba(11,10,9,0));
   }
-  .map-footer-label{ font-size:11.5px; color:var(--ink-faint); font-family:var(--font-ui); }
+  .map-footer .continue-btn{ pointer-events:auto; }
+  .map-attrib{ pointer-events:auto; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.04em; color:var(--ink-dim); margin-right:8px; }
+  .map-attrib a{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
+  .map-attrib a:hover{ color:var(--ink); }
   .continue-btn{
     background:var(--accent);
     color:var(--paper);
     border:1px solid var(--accent-bright);
-    font-family:var(--font-ui); font-size:13px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
-    padding:11px 18px; cursor:pointer;
+    font-family:var(--font-ui); font-size:var(--fs-sm); font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    padding:12px 20px; min-height:44px; cursor:pointer;
     transition: background .2s ease;
   }
   .continue-btn:hover{ background:var(--accent-bright); }
@@ -444,10 +563,15 @@
   }
   .overlay-backdrop.is-open{ opacity:1; visibility:visible; }
 
+  /* Ficha de sitio: un mismo diseño para todos. Arriba, foto 16:9 junto al nombre;
+     abajo, la nómina a todo el ancho. Los hospitales usan una variante compacta. */
   .ccd-popup{
     position:fixed;
-    width:min(92vw,380px); max-height:min(70vh,460px);
-    overflow-y:auto;
+    width:min(96vw, 1200px);
+    display:grid;
+    grid-template-columns:minmax(220px, 30%) 1fr;
+    grid-template-areas:"media head" "list list";
+    overflow:hidden;
     background:var(--bg-card);
     border:1px solid var(--line-strong);
     z-index:21;
@@ -455,30 +579,54 @@
     transform: scale(.96);
     transition: opacity .2s ease, transform .2s ease, visibility .2s ease;
   }
+  .ccd-popup.is-hospital{
+    width:min(92vw, 460px);
+    grid-template-columns:1fr;
+    grid-template-areas:"media" "head" "list";
+  }
+  @media (max-width:760px){
+    .ccd-popup{ grid-template-columns:1fr; grid-template-areas:"media" "head" "list"; overflow-y:auto; }
+    .ccd-popup .popup-list{ overflow:visible !important; max-height:none !important; }
+  }
+  body:has(.overlay-backdrop.is-open) .proto-tag,
+  body:has(#timeline[data-state="active"]) .proto-tag{ display:none; }
+  body:has(.ccd-popup.is-open) .map-label{ opacity:0; }
   .ccd-popup.is-open{ opacity:1; visibility:visible; transform: scale(1); }
   .popup-close{
     position:absolute; top:8px; right:8px; z-index:2;
-    width:28px; height:28px;
+    width:36px; height:36px;
     background:rgba(11,10,9,.6); border:1px solid var(--line-strong);
-    color:var(--ink-dim); font-size:16px; line-height:1; cursor:pointer;
+    color:var(--ink-dim); font-size:var(--fs-lg); line-height:1; cursor:pointer;
   }
   .popup-close:hover{ color:var(--ink); }
   .popup-media{
-    position:relative; min-height:130px;
+    grid-area:media;
+    position:relative; aspect-ratio:16 / 9; min-width:0;
     background:
       repeating-linear-gradient(135deg, rgba(241,233,254,.05) 0 2px, transparent 2px 9px),
       var(--bg-raised);
     display:flex; align-items:flex-end;
     border-bottom:1px solid var(--line);
+    border-right:1px solid var(--line);
   }
-  .popup-media-label{ font-family:var(--font-ui); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); padding:7px 10px; }
-  .popup-body{ padding:18px 20px 20px; display:flex; flex-direction:column; gap:10px; }
-  .popup-eyebrow{ font-family:var(--font-ui); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-bright); }
-  .popup-title{ font-family:var(--font-display); font-size:18px; }
-  .popup-address{ font-size:12px; color:var(--ink-faint); }
-  .popup-victims-heading{ margin-top:6px; font-family:var(--font-ui); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); }
+  .ccd-popup.is-hospital .popup-media{ border-right:none; }
+  .popup-media-label{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); padding:7px 10px; }
+  .popup-head{
+    grid-area:head; min-width:0;
+    padding:22px 64px 20px 26px;
+    display:flex; flex-direction:column; justify-content:flex-end; gap:8px;
+    border-bottom:1px solid var(--line);
+  }
+  .popup-list{ grid-area:list; min-height:0; overflow-y:auto; padding:16px 26px 22px; display:flex; flex-direction:column; gap:8px; }
+  .ccd-popup.is-hospital .popup-head{ padding:18px 20px 14px; }
+  .ccd-popup.is-hospital .popup-list{ padding:14px 20px 20px; }
+  .popup-eyebrow{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); }
+  .popup-title{ font-family:var(--font-display); font-size:var(--fs-xl); line-height:1.2; }
+  .popup-address{ font-size:var(--fs-sm); color:var(--ink-dim); }
+  .popup-victims-heading{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); }
 
-  .victim-flow{ font-size:13.5px; line-height:2; }
+  .victim-flow{ font-size:13px; line-height:1.75; }
+  .ccd-popup.is-hospital .victim-flow{ font-size:var(--fs-sm); line-height:1.9; }
   .victim-name.is-focused{ color:var(--ink); font-weight:700; }
   .victim-name.is-blurred{ color:var(--ink-faint); filter: blur(2.6px); user-select:none; }
   .victim-sep{ color:var(--ink-faint); }
@@ -500,51 +648,95 @@
   .drawer-head{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     padding:14px 16px; border-bottom:1px solid var(--line);
-    font-family:var(--font-ui); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim);
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim);
   }
   .drawer-close{
-    background:none; border:none; color:var(--ink-dim); font-size:18px; line-height:1; cursor:pointer; padding:2px 4px;
+    background:none; border:none; color:var(--ink-dim); font-size:var(--fs-lg); line-height:1; cursor:pointer; width:36px; height:36px;
   }
   .drawer-close:hover{ color:var(--ink); }
   .drawer-body{ padding:14px 16px; }
 
   .convict-group{ margin-bottom:16px; }
   .convict-group:last-child{ margin-bottom:0; }
-  .convict-force{ font-family:var(--font-ui); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-bright); margin-bottom:8px; }
+  .convict-force{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--accent-text); margin-bottom:8px; }
   .convict-entry{ margin-bottom:10px; }
-  .convict-name{ font-size:13.5px; font-weight:700; color:var(--ink); }
+  .convict-name{ font-size:var(--fs-sm); font-weight:700; color:var(--ink); }
   .convict-penas{ list-style:none; margin:4px 0 0; padding:0; display:flex; flex-direction:column; gap:2px; }
-  .convict-penas li{ font-size:11.5px; color:var(--ink-dim); padding-left:10px; position:relative; }
+  .convict-penas li{ font-size:var(--fs-xs); line-height:1.5; color:var(--ink-dim); padding-left:10px; position:relative; }
   .convict-penas li::before{ content:"—"; position:absolute; left:0; color:var(--ink-faint); }
-  .panel-hint{ font-size:12.5px; color:var(--ink-faint); line-height:1.6; }
+  .convict-penas .pena-causa{ color:var(--ink-faint); }
+  .panel-hint{ font-size:var(--fs-sm); color:var(--ink-faint); line-height:1.6; }
 
   /* ===================== QUIÉNES SOMOS ===================== */
+  /* Legajo a dos columnas: a la izquierda el rótulo de cada sección (como la pestaña de
+     una carpeta), a la derecha el texto con medida de lectura. En pantallas angostas, una columna. */
   #about{ background:transparent; }
-  .about-content{
-    flex:1 1 auto; overflow-y:auto;
-    width:100%; max-width:640px; margin:0 auto;
-    padding: 28px max(20px, env(safe-area-inset-left,0px)) calc(40px + env(safe-area-inset-bottom,0px)) max(20px, env(safe-area-inset-right,0px));
-    display:flex; flex-direction:column; gap:34px;
+  .about-scroll{
+    flex:1 1 auto; overflow-y:auto; min-height:0;
+    padding-block: 48px calc(64px + env(safe-area-inset-bottom,0px));
+    padding-left:max(24px, env(safe-area-inset-left,0px));
+    padding-right:max(24px, env(safe-area-inset-right,0px));
   }
-  .about-hero{ display:flex; flex-direction:column; gap:6px; }
-  .about-eyebrow{ font-family:var(--font-ui); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-bright); }
-  .about-title{ font-family:var(--font-display); font-size:clamp(24px,5vw,30px); }
-  .about-intro{ font-size:14.5px; line-height:1.8; color:var(--ink-dim); }
-  .about-intro b{ color:var(--ink); font-weight:700; }
-  .about-section-title{
-    font-family:var(--font-ui); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--ink-faint); margin-bottom:14px;
+  .about-wrap{ max-width:1120px; margin:0 auto; display:flex; flex-direction:column; gap:56px; }
+
+  .about-hero{
+    display:grid; grid-template-columns:minmax(0,1fr) auto; gap:24px 56px; align-items:start;
+    padding-bottom:40px; border-bottom:1px solid var(--line-strong);
   }
-  .team-list{ display:flex; flex-direction:column; border-top:1px solid var(--line); }
-  .team-row{
-    display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 16px;
-    padding:13px 0; border-bottom:1px solid var(--line);
+  .about-eyebrow{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.16em; text-transform:uppercase; color:var(--accent-text); }
+  .about-title{ font-family:var(--font-display); font-size:clamp(36px,5vw,56px); line-height:1.05; margin:10px 0 22px; }
+  .about-lead{ font-size:var(--fs-lg); line-height:1.7; color:var(--ink); max-width:62ch; margin:0; }
+  .about-lead b{ color:var(--paper); }
+  .about-stamp{
+    position:relative; margin-top:28px;
+    font-family:var(--font-display); color:var(--accent-text);
+    border:2px solid var(--accent-bright); padding:14px 20px 12px;
+    transform:rotate(-4deg); text-align:center; line-height:1.25;
   }
-  .team-name{ font-family:var(--font-display); font-size:13.5px; }
-  .team-role{ font-family:var(--font-ui); font-size:12px; color:var(--ink-dim); text-align:right; flex:1 1 200px; }
-  .about-institutional{
-    font-family:var(--font-ui); font-size:12px; line-height:1.7; color:var(--ink-faint);
-    border-top:1px solid var(--line); padding-top:16px;
+  .about-stamp::after{ content:""; position:absolute; inset:3px; border:1px solid var(--accent-bright); opacity:.45; pointer-events:none; }
+  .about-stamp .years{ display:block; font-size:var(--fs-xl); letter-spacing:.1em; }
+  .about-stamp .label{ display:block; font-size:var(--fs-xs); letter-spacing:.18em; text-transform:uppercase; margin-top:4px; }
+
+  .about-row{ display:grid; grid-template-columns:240px minmax(0,1fr); gap:20px 56px; }
+  .about-label{ position:relative; }
+  .about-label h3{ font-family:var(--font-display); font-size:var(--fs-lg); line-height:1.3; color:var(--paper); position:sticky; top:0; margin:0; }
+  .about-label h3 small{ display:block; margin-top:8px; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); line-height:1.5; }
+  .about-body{ display:flex; flex-direction:column; gap:18px; max-width:68ch; }
+  .about-body p{ margin:0; font-size:var(--fs-md); line-height:1.75; color:var(--ink-dim); }
+
+  .about-quote{
+    margin:0; padding:34px 0 34px 30px; border-left:3px solid var(--accent-bright);
+    font-family:var(--font-display); font-size:clamp(20px,2.2vw,26px); line-height:1.45; color:var(--paper);
+    max-width:46ch; margin-left:296px;
+  }
+
+  .about-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; border-top:1px solid var(--line); }
+  .about-list li{ padding:11px 0; border-bottom:1px solid var(--line); font-size:var(--fs-md); color:var(--ink); }
+  .about-team{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:28px 48px; max-width:none; }
+  .about-team h4, .about-subhead{
+    margin:0 0 10px; font-family:var(--font-ui); font-size:var(--fs-xs); font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim);
+  }
+  .about-team .about-list li{ font-family:var(--font-display); }
+
+  .about-logos{ display:flex; flex-wrap:wrap; align-items:center; gap:20px 40px; padding-top:8px; }
+  .about-logos img{ display:block; height:44px; width:auto; opacity:.85; max-width:100%; }
+
+  .about-credits{ display:grid; grid-template-columns:200px minmax(0,1fr); gap:0; margin:0; border-top:1px solid var(--line); max-width:none; }
+  .about-credits dt, .about-credits dd{ padding:12px 0; border-bottom:1px solid var(--line); margin:0; }
+  .about-credits dt{ font-family:var(--font-ui); font-size:var(--fs-xs); font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); padding-top:15px; }
+  .about-credits dd{ font-size:var(--fs-sm); line-height:1.6; color:var(--ink); }
+  .about-credits a{ color:inherit; text-underline-offset:2px; }
+  .pending{ color:var(--ink-faint); font-style:italic; }
+
+  @media (max-width:880px){
+    .about-hero{ grid-template-columns:1fr; }
+    .about-stamp{ justify-self:start; margin-top:0; }
+    .about-row{ grid-template-columns:1fr; }
+    .about-label h3{ position:static; }
+    .about-quote{ margin-left:0; }
+    .about-team{ grid-template-columns:1fr; }
+    .about-credits{ grid-template-columns:1fr; }
+    .about-credits dt{ border-bottom:none; padding-bottom:0; }
   }
 
   .sr-only{
@@ -557,6 +749,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+</head>
+<body>
 <svg class="watermark-layer" aria-hidden="true">
   <defs>
     <pattern id="stampPattern" width="280" height="190" patternUnits="userSpaceOnUse" patternTransform="rotate(-16)">
@@ -567,12 +761,11 @@
   <rect width="100%" height="100%" fill="url(#stampPattern)"></rect>
 </svg>
 
-<div class="proto-tag">Prototipo · contenido de prueba</div>
 
 <div id="app">
 
   <header class="topbar" id="topbar">
-    <button class="topbar-logo" id="topbarLogo" type="button">ZONA <span>233</span></button>
+    <button class="topbar-logo" id="topbarLogo" type="button" aria-label="Zona 233, volver al inicio"><img src="assets/img/logo-zona233.png" alt="Zona 233" width="162" height="26"></button>
     <div class="topbar-right">
       <div class="topbar-slot" id="topbarSlot"></div>
       <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false" aria-label="Silenciar sonido">♪</button>
@@ -584,23 +777,18 @@
     <!-- ===================== SPLASH ===================== -->
     <section id="splash" class="screen" data-state="active">
       <div class="splash-inner">
-        <svg class="fingerprint" viewBox="0 0 100 100" aria-hidden="true">
-          <g fill="none" stroke="var(--ink-dim)" stroke-width="2.4">
-            <path d="M50 12 C28 12 14 30 14 52 C14 72 28 88 50 88" />
-            <path d="M50 20 C34 20 23 34 23 52 C23 68 33 80 48 83" />
-            <path d="M50 28 C40 28 32 38 32 52 C32 64 39 73 48 76" />
-            <path d="M50 36 C45 36 41 42 41 52" />
-            <path d="M57 14 C72 18 80 34 78 52" />
-            <path d="M57 23 C68 27 74 38 72 51" />
-          </g>
-        </svg>
-        <div class="logo-wrap">
-          <div class="logo-line" id="logoLine1"></div>
-          <div class="logo-line" id="logoLine2"></div>
-        </div>
-        <p class="tagline">Una reconstrucción <b>crono-espacial</b> del circuito represivo del Área 233 en Resistencia, a partir de los juicios de lesa humanidad.</p>
+        <!-- Logo animado: blanco sobre negro, fusionado con el fondo (mix-blend-mode: lighten) -->
+        <video class="splash-logo" id="splashLogo" muted playsinline preload="auto" width="1000" height="612" aria-label="Zona 233">
+          <source src="assets/video/logo-zona233.mp4" type="video/mp4">
+          <source src="assets/video/logo-zona233.webm" type="video/webm">
+        </video>
+        <p class="tagline">La red clandestina de la dictadura en Resistencia.</p>
         <button class="start-btn" id="btnStart" type="button">Empezar recorrido</button>
         <button class="about-link" id="aboutLink" type="button">¿Quiénes somos? →</button>
+      </div>
+      <div class="splash-inst" aria-label="Instituciones">
+        <img src="assets/img/logo-unne-fadycc.png" alt="Universidad Nacional del Nordeste · Facultad de Artes, Diseño y Ciencias de la Cultura" width="129" height="24">
+        <img src="assets/img/logo-cpm.png" alt="Comisión Provincial por la Memoria del Chaco" width="99" height="24">
       </div>
     </section>
 
@@ -616,7 +804,7 @@
           <div class="card-body">
             <div class="card-year-stamp" id="cardYear">2003</div>
             <h2 class="card-title" id="cardTitle">Título de prueba</h2>
-            <p class="card-text" id="cardText">Texto de prueba.</p>
+            <div class="card-text" id="cardText">Texto de prueba.</div>
             <button class="card-cta" id="cardCta" type="button" hidden>¿Qué se reconstruyó?</button>
           </div>
         </article>
@@ -640,9 +828,11 @@
       </div>
 
       <div class="map-stage">
-        <div class="map-provisional">Mapa provisorio · reemplazar por cartografía real</div>
+        <div class="map-provisional" id="mapProvisional" hidden>Mapa provisorio · imagen real pendiente</div>
 
-        <svg class="map-svg" id="mapSvg" viewBox="0 0 360 300" role="img" aria-label="Mapa de Resistencia con centros clandestinos"></svg>
+        <svg class="map-svg" id="mapSvg" viewBox="0 0 1280 680" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Mapa de Resistencia con centros clandestinos"></svg>
+        <div class="map-vignette" aria-hidden="true"></div>
+        <svg class="map-svg map-svg-markers" id="mapMarkersSvg" viewBox="0 0 1280 680" preserveAspectRatio="xMidYMid slice"></svg>
 
         <button class="drawer-trigger" id="btnCondenas" type="button">
           Condenas <span class="count" id="condenasCount">0</span>
@@ -650,7 +840,7 @@
       </div>
 
       <div class="map-footer">
-        <span class="map-footer-label" id="mapFooterLabel">Revisá el mapa antes de continuar</span>
+        <span class="map-attrib">© <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>
         <button class="continue-btn" id="btnContinue" type="button">¿Cómo siguió?</button>
       </div>
 
@@ -660,10 +850,12 @@
       <div class="ccd-popup" id="ccdPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
         <button class="popup-close" id="popupClose" type="button" aria-label="Cerrar">×</button>
         <div class="popup-media"><div class="popup-media-label" id="popupMediaLabel">Fotografía del sitio — pendiente</div></div>
-        <div class="popup-body">
+        <div class="popup-head">
           <div class="popup-eyebrow">Centro clandestino</div>
           <h3 class="popup-title" id="popupTitle">Nombre del sitio</h3>
           <div class="popup-address" id="popupAddress">Dirección de prueba</div>
+        </div>
+        <div class="popup-list">
           <div class="popup-victims-heading">Nómina</div>
           <div class="victim-flow" id="popupVictims"></div>
         </div>
@@ -680,31 +872,96 @@
 
     <!-- ===================== QUIÉNES SOMOS ===================== -->
     <section id="about" class="screen" data-state="hidden">
-      <div class="about-content">
-        <div class="about-hero">
-          <span class="about-eyebrow">Zona 233</span>
-          <h2 class="about-title">Quiénes somos</h2>
+      <div class="about-scroll">
+        <div class="about-wrap">
+
+          <header class="about-hero">
+            <div>
+              <span class="about-eyebrow">Zona 233</span>
+              <h2 class="about-title">Quiénes somos</h2>
+              <p class="about-lead"><b>Zona 233</b> es un proyecto documental interactivo y transmedia que busca reconstruir la trama territorial del terrorismo de Estado en la ciudad de Resistencia. Su nombre recupera la denominación operativa asignada por las Fuerzas Armadas durante la última dictadura cívico-militar, período en el cual nuestra ciudad quedó subordinada al Área de Seguridad 233 dentro del esquema represivo regional.</p>
+            </div>
+            <div class="about-stamp" aria-hidden="true">
+              <span class="years">1976 — 2026</span>
+              <span class="label">A 50 años del golpe</span>
+            </div>
+          </header>
+
+          <section class="about-row">
+            <div class="about-label"><h3>El proyecto</h3></div>
+            <div class="about-body">
+              <p>Al cruzar la cartografía digital con los testimonios de sobrevivientes y las sentencias judiciales, proponemos que los propios espacios tomen la palabra para evidenciar que las calles, esquinas y edificios que transitamos a diario formaron parte de una red clandestina y articulada de secuestro, tortura y desaparición.</p>
+            </div>
+          </section>
+
+          <section class="about-row">
+            <div class="about-label"><h3>A 50 años del golpe</h3></div>
+            <div class="about-body">
+              <p>A medio siglo del golpe de Estado del 24 de marzo de 1976, esta propuesta cobra sentido ante un contexto donde la memoria enfrenta una nueva ola de desinformación y discursos negacionistas desde poderes que buscan reinstalar el modelo de país promovido por los represores. Frente a este escenario, resulta indispensable reafirmar nuestros principios y poner en valor las conquistas alcanzadas en el juzgamiento de los crímenes cometidos contra la humanidad en nuestra patria, donde Argentina consolidó una experiencia de vanguardia a escala internacional al ser uno de los pocos países del mundo en juzgar y condenar el genocidio de su propia dictadura a través de tribunales ordinarios y bajo las garantías del debido proceso.</p>
+              <p>Este juzgamiento histórico fue el fruto de décadas de lucha ininterrumpida de los organismos de derechos humanos, sobrevivientes, familiares y de una sociedad encolumnada tras un pilar irrenunciable de su identidad democrática. Una reconstrucción que se volvió tangible gracias al aporte valiente de las víctimas, quienes, quebrando el miedo y el peso de la persecución, declararon en audiencias públicas para reconocer los sitios donde se los mantuvo en cautiverio, señalar a los responsables de su secuestro y aportar informaciones decisivas sobre el destino de compañeros y compañeras desaparecidos desde esos mismos centros.</p>
+            </div>
+          </section>
+
+          <blockquote class="about-quote">Desde esa convicción se concibe Zona 233: un espacio para sostener, visibilizar y amplificar la memoria en el presente, defendiendo la verdad que se le arrancó colectivamente a décadas de silencio e impunidad.</blockquote>
+
+          <section class="about-row">
+            <div class="about-label"><h3>Marco institucional y académico</h3></div>
+            <div class="about-body">
+              <p>Este desarrollo se llevó a cabo en el ámbito de la Universidad Nacional del Nordeste (UNNE), dentro de la Facultad de Artes, Diseño y Ciencias de la Cultura (FADyCC), articulando contenidos, diseño y producción entre dos cátedras:</p>
+              <ul class="about-list">
+                <li>Cátedra Seminario de Integración: Imagen, Sonido y Multimedia III</li>
+                <li>Cátedra Animación 2D, 3D y Diseño Web</li>
+              </ul>
+              <div class="about-logos">
+                <img src="assets/img/logo-unne-fadycc.png" alt="Universidad Nacional del Nordeste · Facultad de Artes, Diseño y Ciencias de la Cultura" width="237" height="44">
+                <img src="assets/img/logo-cpm.png" alt="Comisión Provincial por la Memoria del Chaco" width="182" height="44">
+              </div>
+            </div>
+          </section>
+
+          <section class="about-row">
+            <div class="about-label"><h3>Equipo</h3></div>
+            <div class="about-body about-team">
+              <div>
+                <h4>Equipo docente</h4>
+                <ul class="about-list">
+                  <li>Prof. Verónica Seniquel</li>
+                  <li>Prof. Cristian Cochia</li>
+                  <li>Prof. Pablo Sánchez</li>
+                  <li>Prof. Natalia Uferer</li>
+                </ul>
+              </div>
+              <div>
+                <h4>Estudiantes realizadores</h4>
+                <ul class="about-list">
+                  <li>Gonzalo Brusco</li>
+                  <li>Enzo Nicolás Duré</li>
+                  <li>María José Gutiérrez</li>
+                  <li>Marcelo Latyn</li>
+                  <li>Agustina Lazarte</li>
+                  <li>Maximiliano Vigay</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="about-row">
+            <div class="about-label"><h3>Créditos</h3></div>
+            <dl class="about-body about-credits">
+              <dt>Fuentes</dt>
+              <dd>Sentencias de las causas de lesa humanidad juzgadas en Resistencia. <span class="pending">Detalle de tribunales y expedientes pendiente.</span></dd>
+              <dt>Fotografías</dt>
+              <dd><span class="pending">Pendiente.</span></dd>
+              <dt>Cartografía</dt>
+              <dd>© <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">Mapbox</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></dd>
+              <dt>Tipografías</dt>
+              <dd>Special Elite, Courier Prime y Archivo Narrow (Google Fonts)</dd>
+              <dt>Acompañamiento</dt>
+              <dd>Comisión Provincial por la Memoria del Chaco</dd>
+            </dl>
+          </section>
+
         </div>
-
-        <p class="about-intro">
-          <b>Zona 233</b> recupera la denominación militar que convirtió a Resistencia en área de seguridad represiva durante la última dictadura. El proyecto cruza los ocho sitios que funcionaron como engranajes del terrorismo de Estado en la ciudad con el proceso judicial provincial iniciado en 2010, para que los espacios que transitamos a diario dejen de ser neutrales y vuelvan a contar lo que atravesaron. Es una herramienta de investigación, pedagogía y memoria viva para el territorio.
-        </p>
-
-        <section>
-          <h3 class="about-section-title">El equipo</h3>
-          <div class="team-list">
-            <div class="team-row"><span class="team-name">Agustina Lazarte</span><span class="team-role">Dirección de fotografía · gestión de redes</span></div>
-            <div class="team-row"><span class="team-name">Enzo Duré</span><span class="team-role">Diseño y postproducción sonora</span></div>
-            <div class="team-row"><span class="team-name">Gonzalo Brusco</span><span class="team-role">Guion, investigación y coordinación general</span></div>
-            <div class="team-row"><span class="team-name">Marcelo Latyn Schiavon</span><span class="team-role">Programación y desarrollo web / WebAR</span></div>
-            <div class="team-row"><span class="team-name">María José Gutierrez</span><span class="team-role">Dirección de arte · gestión institucional</span></div>
-            <div class="team-row"><span class="team-name">Maximiliano Vigay</span><span class="team-role">Desarrollo web · montaje audiovisual · producción general</span></div>
-          </div>
-        </section>
-
-        <p class="about-institutional">
-          Un proyecto de la Cátedra Seminario de Integración de Imagen, Sonido y Multimedia 3, en articulación con la Comisión Provincial por la Memoria del Chaco.
-        </p>
       </div>
     </section>
 
@@ -716,69 +973,196 @@
   "use strict";
 
   /* ------------------------------------------------------------------
-     DATOS DE PRUEBA
-     Todo lo que sigue es contenido ficticio para probar la mecánica.
-     Se reemplaza por los datos reales del Sheets una vez que estén cargados.
+     DATOS
+     Sitios y mapa: reales. Hitos, sentencias, víctimas y condenas: generados
+     desde la planilla "ZONA 233 - WEB" con build_data.py. Textos e imágenes
+     de los hitos: pendientes.
   ------------------------------------------------------------------- */
 
+  /* Los 8 ex-CCD son reales (nombre y coordenadas). x,y son posiciones en el
+     lienzo del mapa (1280x680), calculadas desde lat/lon con proyección Web
+     Mercator para el encuadre MAP_VIEW. Si cambia el encuadre, se recalculan. */
   var CCDS = [
-    { id:'ccd1', nombre:'Alcaidía (dato de prueba)',  direccion:'Dirección de prueba 100, Resistencia', x:96,  y:168 },
-    { id:'ccd2', nombre:'Jefatura (dato de prueba)',  direccion:'Dirección de prueba 200, Resistencia', x:190, y:92  },
-    { id:'ccd3', nombre:'Brigada (dato de prueba)',   direccion:'Dirección de prueba 300, Resistencia', x:268, y:196 },
-    { id:'ccd4', nombre:'Comando (dato de prueba)',   direccion:'Dirección de prueba 400, Resistencia', x:150, y:244 }
+    { id:'ccd1', nombre:'Brigada de Investigaciones Marcelo T. de Alvear', direccion:'Dirección pendiente de carga', lat:-27.44998171041852, lon:-58.98580178811233, x:740.8, y:257.5 },
+    { id:'ccd2', tipo:'hospital', nombre:'Hospital Perrando', direccion:'Dirección pendiente de carga', lat:-27.4593730935916, lon:-58.97700165692545, x:813.8, y:345.3 },
+    { id:'ccd3', nombre:'Jefatura de Policía de la Provincia', direccion:'Dirección pendiente de carga', lat:-27.4396240000542, lon:-58.99921264659869, x:629.5, y:160.6 },
+    { id:'ccd4', nombre:'Grupo de Artillería N°7 La Liguria', direccion:'Dirección pendiente de carga', lat:-27.47799747374264, lon:-58.95639471833886, x:984.7, y:519.4 },
+    { id:'ccd5', nombre:'Unidad Penal Federal N°7', direccion:'Dirección pendiente de carga', lat:-27.46993347648468, lon:-58.99305889550067, x:680.6, y:444.0 },
+    { id:'ccd6', nombre:'Alcaidía Provincial de Resistencia', direccion:'Dirección pendiente de carga', lat:-27.45519314302465, lon:-59.0395063357934, x:295.3, y:306.2 },
+    { id:'ccd7', nombre:'Brigada de Investigaciones Juan B. Justo', direccion:'Dirección pendiente de carga', lat:-27.45545945296473, lon:-58.98317888574821, x:762.5, y:308.7 },
+    { id:'ccd8', tipo:'hospital', nombre:'Hospital para la Madre y el Niño', direccion:'Dirección pendiente de carga', lat:-27.45021559308352, lon:-58.9910211588202, x:697.5, y:259.7 }
   ];
 
-  var VICTIMAS = [
-    { nombre:'Nombre de prueba 1', ccd:'ccd1', juicio:'j1' },
-    { nombre:'Nombre de prueba 2', ccd:'ccd1', juicio:'j1' },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd1', juicio:null },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd1', juicio:null },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd1', juicio:null },
+  /* Mapa real (Mapbox, estilo propio). Se prueba primero un archivo local
+     publicado junto a la página y, si no está, la Static Images API. */
+  var MAP_W = 1280, MAP_H = 680;
 
-    { nombre:'Nombre de prueba 3', ccd:'ccd2', juicio:'j1' },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd2', juicio:null },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd2', juicio:null },
+  /* Marcador de Zona 233 (SVG propio). La punta está en (50,115) del dibujo y se
+     apoya sobre la coordenada del sitio; el círculo interior es un hueco. */
+  var PIN_PATH = 'M50 10 C32.33 10 18 24.33 18 42 C18 64 50 115 50 115 C50 115 82 64 82 42 C82 24.33 67.67 10 50 10 Z M50 56 C42.27 56 36 49.73 36 42 C36 34.27 42.27 28 50 28 C57.73 28 64 34.27 64 42 C64 49.73 57.73 56 50 56 Z';
+  var PIN_TIP_X = 50, PIN_TIP_Y = 115, PIN_H_UNITS = 105;
+  var PIN_SCALE = 0.30, PIN_SCALE_SELECTED = 0.36;
+  function pinTransform(x, y, selected, angle){
+    var k = selected ? PIN_SCALE_SELECTED : PIN_SCALE;
+    return 'translate(' + x + ' ' + y + ') rotate(' + (angle || 0) + ') scale(' + k + ') translate(' + (-PIN_TIP_X) + ' ' + (-PIN_TIP_Y) + ')';
+  }
+  /* Inclinación de ±3° fija para cada sitio (siempre la misma, como un sello puesto a mano) */
+  function pinAngle(ccdId){
+    var rnd = seededRandom(hashStr('pin:' + ccdId));
+    return Math.round(((rnd() * 2 - 1) * 3) * 10) / 10;
+  }
+  var MAP_VIEW = { lon:-58.99795, lat:-27.45881, zoom:12.51 };
+  /* El mapa es una imagen fija generada con la Static Images API de Mapbox (estilo
+     maxtl07/cmvmqp3s3000g01rz7v1u2nzx, encuadre MAP_VIEW, 1280x680@2x). El token no
+     va en el código: para regenerar la imagen se usa desde la cuenta de Mapbox. */
+  var MAP_IMG_SOURCES = ['assets/img/mapa-resistencia.png'];
+  var mapBgSrc = null;
 
-    { nombre:'Nombre de prueba 4', ccd:'ccd3', juicio:'j2' },
-    { nombre:'Nombre de prueba 5', ccd:'ccd3', juicio:'j2' },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd3', juicio:null },
+  /* @@DATOS-INICIO */
+  /* Generado desde la planilla editable de Zona 233 (no editar a mano: se regenera). */
+  var VICTIMAS = [{"nombre": "María José Teresa Presa de Parodi", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Elsa Siria Quiroz", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Rubén Alcides Arce", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gregorio Magno Quintana", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Daniel Enrique Ferracini", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Fernández", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Walter Valentín Medina", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "José Niveyro", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Eduardo Lenscak", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Vicente Cantero", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "María Graciela de la Rosa", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Nora del Valle Giménez de Valladares", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Héctor Rolando Berger", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Roberto Alcides Greca", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gerardo Delgado", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Rodolfo Amado Sobko", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Héctor Edgardo Costas", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Sergio Romero", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Olga Esther Chamorro", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gladis Graciela del Carmen Borrini", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Mario Augusto Arqueros", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "José Luis Núñez", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Raúl Luis Copello", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Antonio Heraldo Prieto", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Aureliano Villán", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "José Saavedra", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Walter Valentín Medina", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "José Niveyro", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Vicente Cantero", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Santiago Almada", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Juan Manuel González", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Luis Albano Rossi", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Eusebio Dolores Esquivel", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Gerardo Delgado", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Rodolfo Amado Sobko", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Roberto Alcides Greca", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Héctor Edgardo Costas", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Raúl Fernando Junco", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Leopoldo Jordán", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Dante Peinó", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "José Luis Valenzuela", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Ricardo Alejandro Vassel", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Elvira Esther Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "María Gregoria Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Santiago Almada", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Juan Manuel González", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Luis Albano Rossi", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Néstor Silvio Navarro", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Roberto Ramón Tribbia", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Aníbal Ponti", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Rubén Darío Vassel", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Eligia Flor", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Antonio Oscar Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Mirta Mabel Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "José Saavedra", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Carlos Alberto Zamudio", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Fernando Gabriel Piérola", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Alcides Bosch", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Roberto Horacio Yedro", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Alberto Díaz", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Juan Manuel Roldán", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Carlos Enrique Tereszecuk", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Raúl María Caire", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Delicia González", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Alcides Bosch", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Aníbal Ponti", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Belzor Miño", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Miguel \"Gato\" Sánchez", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Juan Fernández", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Miguel Ángel Bampini", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "José Niveyro", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Julio Andrés Pereyra", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Alberto Díaz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Roberto Horacio Yedro", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Zamudio", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Fernando Gabriel Piérola", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "José Luis Valenzuela", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Alejandro Vassel", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Manuel Roldán", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Adolfo Galo", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Miguel Marciano López", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Roberto Cejas", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Omar Rodolfo Lana", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Aníbal Ponti", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Fernández", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Miguel Ángel Bampini", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Belzor Miño", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Daniel Omar Aguirre", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Santiago Martínez Cortez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Pedro Dinani", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Rodolfo Bustamante", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "María Graciela de la Rosa", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Elsa Siria Quiroz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Delicia González", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Julio Andrés Pereyra", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Eusebio Dolores Esquivel", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd5", "juicio": "j3"}, {"nombre": "Cristóbal Martínez Cortez", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Miguel Jerónimo Salinas", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Pedro Crisólogo Morel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Sara Fulvia Ayala de Morel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Raúl Gómez Lemos", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rodolfo Bustamante", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Aurelio Díaz", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Víctor Rodríguez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Humberto Arce", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rogelio Domingo Tomasella", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "José Horacio Oviedo", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "María Elena Rossi", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Raúl Ceferino Lazzatti", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ana Chara", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Pedro Agustín Lovey", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Marcelino Ismael Zequeira", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Elías José Guzmán", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Fidel Gómez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Vladimiro Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Vicente Karpiu", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Kielnichuk", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Braulio Linka", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "José Cabrera", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Alberto Miño", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Pedro Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Dionisio Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Alberto Rómulo D'Alessandro", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Santiago Rivera", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Dolores Flores", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Nemesio Machuca", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Erlindo Evelio Pérez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Laszczuk", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Martín Guzmán", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Leonardo Mendieta", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Oscar Salvador D'Alessandro", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Felipe Dante Piccoli", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Jara", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Maestro Ortiz", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Testa", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Lorenzo Elvio Borrini", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Víctor Hugo Arroyo", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Adolfo Adrián Coronel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rafael Coronel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Mario Horacio Pezzelato", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd3", "juicio": "j4"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd3", "juicio": "j4"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Nora del Valle Giménez de Valladares", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Daniel Enrique Ferracini", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "María Elena Rossi", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "María José Teresa Presa de Parodi", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Santos Britez", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Hipólito Britez", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Modesto Meza", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Santos Britez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Hipólito Britez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Modesto Meza", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Leopoldo Jordán", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Osvaldo Raúl Lovey", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Avelina de León", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Luis Juan Rodríguez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Chávez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Felipe Dante Piccoli", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Ciril Ivanoff", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Lázaro Frías / José Álvarez Frías Benítez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Aníbal Ponti", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "María Gregoria Pérez", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Juan Eduardo Lenscak", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Hugo Peino", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Elvira Haydee Acuña", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Hugo Peino", "ccd": "ccd6", "juicio": "j6"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Walter Rodolfo Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "David Reinaldo Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ramón Ricardo Giménez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ermelindo Aguirre", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Marcelino Aguirre", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Manuel Roque Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Jorge Héctor Castro", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "María de los Milagros Demiryi", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Raúl Luis Copello", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Juan Manuel González", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Rolando Alfredo Azcona", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Roberto Alfredo Valetto", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Adolfo Galo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Susana Graciela Diez de los Ríos", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Mencho Campos", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Quirulo Ortiz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Pato Ortiz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Norma Beatriz Medawar", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Juan Carlos Rodríguez Urbina", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Guillermo Niveiro", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Cristina Alicia Figueredo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Diego Martín Romero", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "María Esther Figueredo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ernesto Luis Martínez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Rosa Alcaraz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Mónica Judith Almirón de Lauroni", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Enzo Lauroni", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Abel Arce", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Gerardo Delgado", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Ramón Arcángel Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Marcelino Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Sofía Ester Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Zenón Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Juan Manuel González", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Ramón Arcángel Hanríquez", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Roberto Alfredo Valetto", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Olga Esther Chamorro", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Sergio Romero", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Oscar Gómez", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Zaldívar", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Ludueña", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Adolfo José Ibarra", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Santiago Almada", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Norma Beatriz Medawar", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Juan Carlos Rodríguez Urbina", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "\"Gordo\" Meza", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Gutiérrez", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Miño", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Pira", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Graciela Isabel Britez", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "\"Polaca\" Insfrán", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Roberto Cejas", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Lázaro Castro", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "María de los Milagros Demiryi", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd2", "juicio": "j10"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd4", "juicio": "j10"}, {"nombre": "Carlos Enrique Tereszecuk", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Luis Caire / Quirel", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd5", "juicio": "j11"}];
 
-    { nombre:'Nombre de prueba 6', ccd:'ccd4', juicio:'j3' },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd4', juicio:null },
-    { nombre:'N.N. (dato de prueba)', ccd:'ccd4', juicio:null }
-  ];
+  var CONDENAS = [{"juicio": "j1", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Humberto Lucio Caballero", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Ramón Esteban Meza", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Rubén Héctor Roldán", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Francisco Orlando Álvarez", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Oscar Alberto Galarza", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Ramón Andrés Gandola", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j1", "condenado": "Enzo Breard", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j1", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "25 años de prisión"}, {"juicio": "j2", "condenado": "Athos Gustavo Renés", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Jorge Daniel Rafael Carnero Sabol", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Horacio Losito", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Aldo Héctor Martínez Segón", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Ricardo Guillermo Reyes", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Ernesto Jorge Simoni", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Germán Emilio Riquelme", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j3", "condenado": "Norberto Raúl Tozzo", "fuerza": "Ejército Argentino", "pena": "24 años de prisión"}, {"juicio": "j4", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "19 años de prisión"}, {"juicio": "j4", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j4", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j4", "condenado": "Albino Luis Borda", "fuerza": "Policía de la Provincia del Chaco", "pena": "22 años de prisión"}, {"juicio": "j4", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "20 años de prisión"}, {"juicio": "j4", "condenado": "Ramón Esteban Meza", "fuerza": "Policía de la Provincia del Chaco", "pena": "19 años de prisión"}, {"juicio": "j4", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j4", "condenado": "Enzo Breard", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j4", "condenado": "Ángel Jorge Ibarra", "fuerza": "Policía de la Provincia del Chaco", "pena": "12 años de prisión"}, {"juicio": "j4", "condenado": "Antonio Musa Azar", "fuerza": "Policía de la Provincia de Santiago del Estero", "pena": "10 años de prisión"}, {"juicio": "j4", "condenado": "Miguel Tomás Garbi", "fuerza": "Policía de la Provincia de Santiago del Estero", "pena": "10 años de prisión"}, {"juicio": "j5", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j5", "condenado": "Alcides Roberto Safenraiter", "fuerza": "Policía de la Provincia del Chaco", "pena": "Prisión perpetua"}, {"juicio": "j5", "condenado": "Eduardo Wischnivetzki", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j5", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "4 años de prisión"}, {"juicio": "j6", "condenado": "Roberto Domingo Mazzoni", "fuerza": "Poder Judicial de la Nación (Justicia Federal)", "pena": "11 años de prisión"}, {"juicio": "j6", "condenado": "César Pablo Casco", "fuerza": "Servicio Penitenciario Federal (SPF)", "pena": "11 años de prisión"}, {"juicio": "j7", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "11 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "7 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j7", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j7", "condenado": "Francisco Orlando Álvarez", "fuerza": "Policía de la Provincia del Chaco", "pena": "14 años de prisión"}, {"juicio": "j7", "condenado": "Ángel Jorge Ibarra", "fuerza": "Policía de la Provincia del Chaco", "pena": "6 años de prisión"}, {"juicio": "j7", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "3 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "César Pablo Casco", "fuerza": "Servicio Penitenciario Federal (SPF)", "pena": "3 años y 9 meses de prisión"}, {"juicio": "j8", "condenado": "Alfredo Luis Chas", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j9", "condenado": "Aldo Héctor Martínez Segón", "fuerza": "Ejército Argentino", "pena": "14 años de prisión"}, {"juicio": "j9", "condenado": "Ricardo Guillermo Reyes", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Ernesto Jorge Simoni", "fuerza": "Ejército Argentino", "pena": "10 años de prisión"}, {"juicio": "j9", "condenado": "Carlos Domingo Mora", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j9", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "14 años de prisión"}, {"juicio": "j9", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Miguel Ángel Vitorello", "fuerza": "Policía de la Provincia del Chaco", "pena": "10 años de prisión"}, {"juicio": "j9", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "9 años de prisión"}, {"juicio": "j10", "condenado": "Roberto Domingo Mazzoni", "fuerza": "Poder Judicial de la Nación (Justicia Federal)", "pena": "5 años y 6 meses de prisión"}];
 
-  var CONDENAS = [
-    { juicio:'j1', condenado:'Imputado de prueba A', fuerza:'Policía', pena:'Prisión perpetua (pena de prueba)' },
-    { juicio:'j1', condenado:'Imputado de prueba B', fuerza:'Ejército', pena:'25 años (pena de prueba)' },
-    { juicio:'j2', condenado:'Imputado de prueba A', fuerza:'Policía', pena:'18 años, causa acumulada (pena de prueba)' },
-    { juicio:'j2', condenado:'Imputado de prueba C', fuerza:'Servicio Penitenciario', pena:'12 años (pena de prueba)' },
-    { juicio:'j3', condenado:'Imputado de prueba D', fuerza:'Gendarmería', pena:'20 años (pena de prueba)' }
-  ];
-
-  var JUICIOS = {
-    j1: { nombre:'Juicio I — causa de prueba "Área 233"',           ccdsIluminados:['ccd1','ccd2'] },
-    j2: { nombre:'Juicio II — causa de prueba "Circuito Sur"',       ccdsIluminados:['ccd3'] },
-    j3: { nombre:'Juicio III — causa de prueba "Comando Radioeléctrico"', ccdsIluminados:['ccd4'] }
-  };
+  var JUICIOS = {"j1": {"nombre": "Causa Caballero I", "ccdsIluminados": ["ccd1", "ccd5", "ccd6", "ccd7"]}, "j2": {"nombre": "Causa Masacre de Margarita Belén I", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6"]}, "j3": {"nombre": "Causa Masacre de Margarita Belén II", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j4": {"nombre": "Causa Caballero II", "ccdsIluminados": ["ccd1", "ccd3", "ccd6"]}, "j5": {"nombre": "Causa Ligas Agrarias", "ccdsIluminados": ["ccd6", "ccd7"]}, "j6": {"nombre": "Causa Complicidad Judicial I", "ccdsIluminados": ["ccd1", "ccd3", "ccd4", "ccd5", "ccd6"]}, "j7": {"nombre": "Causa Caballero III", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6"]}, "j8": {"nombre": "Causa Masacre de Margarita Belén III", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j9": {"nombre": "Causa Conscriptos", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j10": {"nombre": "Causa Complicidad Judicial II", "ccdsIluminados": ["ccd2", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j11": {"nombre": "Causa por el Derecho a la Verdad", "ccdsIluminados": ["ccd1", "ccd3", "ccd5", "ccd6"]}};
 
   var HITOS = [
-    { id:'h1', year:2003, title:'Reapertura de las causas (prueba)',
-      text:'Texto de prueba. Acá va el relato que cuenta qué habilitó, en este hito, retomar la investigación judicial sobre el Área 233.',
-      tieneJuicio:false },
-    { id:'h2', year:2006, title:'Primeras denuncias (prueba)',
-      text:'Texto de prueba. Relato sobre las primeras presentaciones de sobrevivientes y familiares ante la justicia provincial.',
-      tieneJuicio:false },
-    { id:'h3', year:2010, title:'Primer juicio oral (prueba)',
-      text:'Texto de prueba. Se abre el primer debate oral. Desde acá el recorrido se puede desviar al mapa para ver qué reconstruyó esta sentencia.',
-      tieneJuicio:true, juicio:'j1', resuelto:false },
-    { id:'h4', year:2014, title:'Segundo juicio oral (prueba)',
-      text:'Texto de prueba. Nueva etapa judicial que amplía la cartografía de los centros alcanzados.',
-      tieneJuicio:true, juicio:'j2', resuelto:false },
-    { id:'h5', year:2019, title:'Tercer juicio oral (prueba)',
-      text:'Texto de prueba. Último hito judicial cargado en este prototipo.',
-      tieneJuicio:true, juicio:'j3', resuelto:false }
+    {
+      "id": "h1",
+      "year": "2003",
+      "fecha": "2003",
+      "title": "Sanción de la Ley 25.779",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": false
+    },
+    {
+      "id": "h2",
+      "year": "2005",
+      "fecha": "2005",
+      "title": "Recuperación de la Casa por la Memoria",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": false
+    },
+    {
+      "id": "h3",
+      "year": "2010",
+      "fecha": "13 de diciembre de 2010",
+      "title": "Causa Caballero I",
+      "text": "En 2010, tras siete meses de audiencias orales, se dictó la sentencia de la Causa Caballero I, caratulada así por el represor que encabezaba las acusaciones. Con más de 100 testimonios de sobrevivientes, familiares y peritos, inspecciones oculares, y pericias del Equipo Argentino de Antropología Forense, el fallo marcó un hito histórico siendo el primer juicio de lesa humanidad en la provincia del Chaco, quebrando más de 3 décadas de impunidad para las víctimas, los familiares y los organismos de derechos humanos.\nA través del proceso se reconstruyeron aspectos estructurales del terrorismo de Estado en la provincia:\n* La causa acreditó que el accionar represivo comenzó meses antes del golpe de Estado, con secuestros desde el 9 de septiembre de 1975 fundados en persecuciones puramente políticas e ideológicas contra militantes de centros de estudiantes, la Juventud Universitaria Peronista, Montoneros, las Ligas Agrarias y sectores eclesiásticos.\n* Se constató la existencia y la articulación del circuito represivo local, identificando el funcionamiento de la Dirección de Investigaciones en Marcelo T. de Alvear, su posterior funcionamiento en la calle Juan B. Justo y la Alcaidía Policial de Resistencia.\n* Se expuso la operatoria de grupos de choque que tenían a su cargo allanamientos ilegales, saqueos de pertenencias, secuestros sin órdenes judiciales, y dentro de los centros clandestinos la aplicación de tormentos y torturas físicas. Destacándose la jefatura operativa del sargento Gabino Manader.\nRechazando los planteos de prescripción tipificando los hechos como delitos de lesa humanidad se condenó a 12 imputados acreditando 26 víctimas directas del delito de tormentos agravados a las que se sumaron el testimonio de más de 75 testigos que sufrieron diferentes vejaciones de sus derechos en esta época.",
+      "tieneJuicio": true,
+      "juicio": "j1",
+      "resuelto": false
+    },
+    {
+      "id": "h4",
+      "year": "2011",
+      "fecha": "16 de mayo de 2011",
+      "title": "Causa Masacre de Margarita Belén I",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j2",
+      "resuelto": false
+    },
+    {
+      "id": "h5",
+      "year": "2013",
+      "fecha": "8 de marzo de 2013",
+      "title": "Causa Masacre de Margarita Belén II",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j3",
+      "resuelto": false
+    },
+    {
+      "id": "h6",
+      "year": "2018",
+      "fecha": "13 de agosto de 2018",
+      "title": "Causa Caballero II",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j4",
+      "resuelto": false
+    },
+    {
+      "id": "h7",
+      "year": "2019",
+      "fecha": "11 de julio de 2019",
+      "title": "Causa Ligas Agrarias",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j5",
+      "resuelto": false
+    },
+    {
+      "id": "h8",
+      "year": "2019",
+      "fecha": "16 de octubre de 2019",
+      "title": "Causa Complicidad Judicial I",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j6",
+      "resuelto": false
+    },
+    {
+      "id": "h9",
+      "year": "2021",
+      "fecha": "30 de abril de 2021",
+      "title": "Causa Caballero III",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j7",
+      "resuelto": false
+    },
+    {
+      "id": "h10",
+      "year": "2021",
+      "fecha": "14 de mayo de 2021",
+      "title": "Causa Masacre de Margarita Belén III",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j8",
+      "resuelto": false
+    },
+    {
+      "id": "h11",
+      "year": "2022",
+      "fecha": "1 de julio de 2022",
+      "title": "Causa Conscriptos",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j9",
+      "resuelto": false
+    },
+    {
+      "id": "h12",
+      "year": "2024",
+      "fecha": "19 de marzo de 2024",
+      "title": "Causa Complicidad Judicial II",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j10",
+      "resuelto": false
+    },
+    {
+      "id": "h13",
+      "year": "2025",
+      "fecha": "11 de noviembre de 2025",
+      "title": "Causa por el Derecho a la Verdad",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": true,
+      "juicio": "j11",
+      "resuelto": false
+    },
+    {
+      "id": "h14",
+      "year": "Ahora",
+      "fecha": "Ahora",
+      "title": "Cómo siguen las causas",
+      "text": "Texto pendiente de carga.",
+      "tieneJuicio": false
+    }
   ];
+  /* @@DATOS-FIN */
 
   /* ------------------------------------------------------------------
      ESTADO
@@ -801,8 +1185,7 @@
   };
 
   var el = {
-    logoLine1: document.getElementById('logoLine1'),
-    logoLine2: document.getElementById('logoLine2'),
+    splashLogo: document.getElementById('splashLogo'),
     btnStart: document.getElementById('btnStart'),
     aboutLink: document.getElementById('aboutLink'),
 
@@ -825,7 +1208,7 @@
 
     mapJuicioNombre: document.getElementById('mapJuicioNombre'),
     mapSvg: document.getElementById('mapSvg'),
-    mapFooterLabel: document.getElementById('mapFooterLabel'),
+    mapMarkersSvg: document.getElementById('mapMarkersSvg'),
     btnContinue: document.getElementById('btnContinue'),
     btnCondenas: document.getElementById('btnCondenas'),
     condenasCount: document.getElementById('condenasCount'),
@@ -980,12 +1363,19 @@
     }, delay);
   }
 
+  /* Reproduce una vez el logo animado. Si el navegador no deja reproducir solo,
+     o la persona pidió reducir el movimiento, muestra directamente el cuadro final. */
   function startSplashAnimation(){
-    typeLine(el.logoLine1, 'ZONA', 300, 130, function(){
-      typeLine(el.logoLine2, '233', 150, 130, function(){
-        el.logoLine2.innerHTML = '23<span class="digit3 stamp-in">3</span>';
-      });
-    });
+    var v = el.splashLogo;
+    if (!v) return;
+    function showFinal(){
+      var go = function(){ try { v.pause(); v.currentTime = Math.max(0, v.duration - 0.05); } catch (e) {} };
+      if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true });
+    }
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce){ showFinal(); return; }
+    var p = v.play();
+    if (p && p.catch) p.catch(showFinal);
   }
 
   /* ------------------------------------------------------------------
@@ -1002,6 +1392,38 @@
     });
     state.view = name;
     setTopbar(name);
+  }
+
+  /* Cambio de pantalla sin desplazamiento lateral, para el pase línea de tiempo ⇄ mapa.
+     leaveState: 'dive' (ir al mapa) o 'recede' (volver a la línea de tiempo). */
+  var introTimer = null, tlIntroTimer = null;
+  function crossTo(name, cb, leaveState){
+    var target = screens[name];
+    var from = target.dataset.state;
+    var jump = (from !== 'dive' && from !== 'recede');
+    if (jump) target.style.transition = 'none';
+    Object.keys(screens).forEach(function(k){
+      if (k !== name && screens[k].dataset.state === 'active') screens[k].dataset.state = leaveState;
+    });
+    target.dataset.state = 'active';
+    if (name === 'timeline' && leaveState === 'dive'){
+      target.classList.remove('tl-intro');
+      void target.offsetWidth;
+      target.classList.add('tl-intro');
+      clearTimeout(tlIntroTimer);
+      tlIntroTimer = setTimeout(function(){ target.classList.remove('tl-intro'); }, 1400);
+    }
+    if (name === 'mapa'){
+      target.classList.remove('map-intro');
+      void target.offsetWidth;
+      target.classList.add('map-intro');
+      clearTimeout(introTimer);
+      introTimer = setTimeout(function(){ target.classList.remove('map-intro'); }, 1000);
+    }
+    if (cb) cb();
+    state.view = name;
+    setTopbar(name);
+    if (jump){ void target.offsetWidth; requestAnimationFrame(function(){ target.style.transition = ''; }); }
   }
 
   function enterScreen(name, cb){
@@ -1031,7 +1453,8 @@
       back.addEventListener('click', function(){
         playRewind();
         if (view === 'mapa') closeOverlays();
-        setScreen(view === 'mapa' ? 'timeline' : 'splash', 'back');
+        if (view === 'mapa') crossTo('timeline', null, 'recede');
+        else setScreen('splash', 'back');
         if (view === 'mapa') requestAnimationFrame(positionTrack);
       });
       el.topbarSlot.appendChild(back);
@@ -1040,8 +1463,7 @@
 
   el.btnStart.addEventListener('click', function(){
     playOpen();
-    renderTimeline();
-    enterScreen('timeline', null);
+    crossTo('timeline', renderTimeline, 'dive');
     requestAnimationFrame(positionTrack);
   });
 
@@ -1065,9 +1487,11 @@
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'tl-stop';
-      var reachable = i <= state.index;
+      btn.style.setProperty('--i', i);
+      /* todo hito ya alcanzado queda desbloqueado, aunque se vuelva atrás */
+      var reachable = i <= state.maxReached;
       btn.dataset.current = (i === state.index) ? 'true' : 'false';
-      btn.dataset.visited = (i < state.index) ? 'true' : 'false';
+      btn.dataset.visited = (reachable && i !== state.index) ? 'true' : 'false';
       btn.dataset.locked = reachable ? 'false' : 'true';
       btn.disabled = !reachable;
       btn.setAttribute('aria-label', reachable ? ('Ir a ' + h.year) : 'Hito aún no alcanzado');
@@ -1077,10 +1501,7 @@
       btn.innerHTML = '<span class="tl-dot"></span>' + yearHtml;
       btn.addEventListener('click', function(){
         if (!reachable) return;
-        playTick();
-        state.index = i;
-        renderTimeline();
-        positionTrack();
+        changeHito(i);
       });
       el.tlTrackInner.appendChild(btn);
     });
@@ -1097,18 +1518,40 @@
     el.tlTrackInner.style.transform = 'translateX(' + offset + 'px)';
   }
 
+  /* Texto de los hitos: cada renglón es un párrafo; los renglones que empiezan con "* " o "- " son viñetas. */
+  function escapeHtml(t){
+    return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function formatText(text){
+    var out = [], list = [];
+    function flush(){ if (list.length){ out.push('<ul>' + list.join('') + '</ul>'); list = []; } }
+    String(text || '').split(/\r?\n/).forEach(function(line){
+      var t = line.trim();
+      if (!t){ flush(); return; }
+      var m = t.match(/^[*\-•]\s+(.*)$/);
+      if (m){ list.push('<li>' + escapeHtml(m[1]) + '</li>'); }
+      else { flush(); out.push('<p>' + escapeHtml(t) + '</p>'); }
+    });
+    flush();
+    return out.join('');
+  }
+
   function renderTimeline(){
+    state.maxReached = Math.max(state.maxReached || 0, state.index);
     var h = HITOS[state.index];
     var n = HITOS.length;
 
     el.card.classList.toggle('side-right', state.index % 2 === 1);
-    el.cardYear.textContent = h.year;
+    el.cardYear.textContent = h.fecha || h.year;
+    el.cardYear.classList.toggle('is-long', String(h.fecha || h.year).length > 6);
     el.cardTitle.textContent = h.title;
-    el.cardText.textContent = h.text;
+    el.cardText.innerHTML = formatText(h.text);
+    el.cardText.scrollTop = 0;
+    el.cardText.classList.toggle('is-scrollable', el.cardText.scrollHeight > el.cardText.clientHeight + 4);
     el.cardMediaLabel.textContent = 'Foto de archivo — pendiente (' + h.year + ')';
 
     var needsResolution = h.tieneJuicio && !h.resuelto;
-    el.cardCta.hidden = !needsResolution;
+    el.cardCta.hidden = !h.tieneJuicio;  /* también en hitos ya vistos, para revisar un estado anterior del mapa */
 
     var isFirst = state.index === 0;
     var isLast = state.index === n - 1;
@@ -1119,24 +1562,39 @@
     el.btnNext.hidden = isLast;
     el.btnNext.disabled = isLast || needsResolution;
 
-    setTopbar('timeline');
+    if (state.view === 'timeline') setTopbar('timeline');  /* en la portada la barra queda oculta */
     renderTrack();
   }
 
-  function goNext(){
-    if (state.index < HITOS.length - 1){
-      playTick();
-      state.index++;
+  /* Cambio de hito con pase animado: sale la tarjeta actual, entra la nueva y se sella el año. */
+  var hitoTimer = null, autoAdvanceTimer = null;
+  function changeHito(newIndex){
+    if (newIndex === state.index || newIndex < 0 || newIndex >= HITOS.length) return;
+    clearTimeout(autoAdvanceTimer);
+    clearTimeout(hitoTimer);
+    var dir = newIndex > state.index ? 'next' : 'prev';
+    playTick();
+    var card = el.card;
+    card.classList.remove('card-in-next', 'card-in-prev', 'card-out-next', 'card-out-prev');
+    void card.offsetWidth;
+    card.classList.add('card-out-' + dir);
+    hitoTimer = setTimeout(function(){
+      state.index = newIndex;
       renderTimeline();
-    }
+      card.classList.remove('card-out-' + dir);
+      void card.offsetWidth;
+      card.classList.add('card-in-' + dir);
+      stampYear();
+    }, 180);
   }
-  function goPrev(){
-    if (state.index > 0){
-      playTick();
-      state.index--;
-      renderTimeline();
-    }
+  function stampYear(){
+    var st = el.cardYear;
+    st.classList.remove('stamp-anim');
+    void st.offsetWidth;
+    st.classList.add('stamp-anim');
   }
+  function goNext(){ if (!el.btnNext.disabled) changeHito(state.index + 1); }
+  function goPrev(){ changeHito(state.index - 1); }
   el.btnPrev.addEventListener('click', goPrev);
   el.btnNext.addEventListener('click', goNext);
   el.cardCta.addEventListener('click', openMapa);
@@ -1165,68 +1623,209 @@
   }
 
   function openMapa(){
+    clearTimeout(autoAdvanceTimer);
     playOpen();
     closeOverlays();
     state.selectedCcd = null;
-    enterScreen('mapa', renderMapaScreen);
+    crossTo('mapa', renderMapaScreen, 'dive');
   }
 
   function renderMapaScreen(){
     var h = HITOS[state.index];
     var juicio = JUICIOS[h.juicio];
     el.mapJuicioNombre.textContent = juicio.nombre;
-    el.mapFooterLabel.textContent = 'Mapa actualizado al ' + h.year;
     buildMapMarkers();
     updateCondenasBadge();
+    var note = document.getElementById('mapProvisional');
+    if (note) note.hidden = !!mapBgSrc;
   }
 
   function buildMapMarkers(){
     var juicioIds = accumulatedJuicioIds();
-    var litCcds = accumulatedCcds(juicioIds);
+    /* Se iluminan solo los sitios donde la sentencia actual suma víctimas; los demás se apagan.
+       Las nóminas, en cambio, conservan todos los nombres ya reconstruidos. */
+    var curHito = HITOS[state.index];
+    var litCcds = {};
+    if (curHito && curHito.juicio && JUICIOS[curHito.juicio]){
+      (JUICIOS[curHito.juicio].ccdsIluminados || []).forEach(function(cid){ litCcds[cid] = true; });
+    }
 
     var svgParts = [];
-    svgParts.push(
-      '<defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">' +
-      '<path d="M24 0 L0 0 0 24" fill="none" stroke="rgba(241,233,254,0.06)" stroke-width="1"/>' +
-      '</pattern></defs>'
-    );
-    svgParts.push('<rect x="0" y="0" width="360" height="300" fill="var(--bg-raised)"/>');
-    svgParts.push('<rect x="0" y="0" width="360" height="300" fill="url(#grid)"/>');
-    svgParts.push('<line x1="0" y1="150" x2="360" y2="150" stroke="rgba(241,233,254,0.1)" stroke-width="2"/>');
-    svgParts.push('<line x1="180" y1="0" x2="180" y2="300" stroke="rgba(241,233,254,0.1)" stroke-width="2"/>');
+    svgParts.push('<rect x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" fill="var(--bg-raised)"/>');
+    if (mapBgSrc){
+      svgParts.push('<image class="map-bg-img" href="' + mapBgSrc + '" x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" preserveAspectRatio="none"/>');
+    } else {
+      /* Respaldo si la imagen todavía no cargó o no se puede acceder */
+      svgParts.push(
+        '<defs><pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">' +
+        '<path d="M48 0 L0 0 0 48" fill="none" stroke="rgba(241,233,254,0.06)" stroke-width="1"/>' +
+        '</pattern></defs>' +
+        '<rect x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" fill="url(#grid)"/>'
+      );
+    }
 
+    el.mapSvg.innerHTML = svgParts.join('');
+
+    /* Marcadores y etiquetas van en una segunda capa, por encima de la viñeta */
+    var lighting = screens.mapa.classList.contains('map-intro');
+    var markerParts = [];
+    markerParts.push(
+      '<defs>' +
+        /* Sombra paralela sencilla: copia desenfocada del pin, apenas corrida hacia abajo y a la derecha */
+        '<filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.6"/></filter>' +
+        '<filter id="pinGlowBlur" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="12"/></filter>' +
+      '</defs>'
+    );
     CCDS.forEach(function(ccd){
       var lit = !!litCcds[ccd.id];
       var selected = state.selectedCcd === ccd.id;
-      var fill = lit ? 'var(--accent-bright)' : 'var(--accent-muted)';
-      var pulse = lit ? '<circle class="pulse" cx="' + ccd.x + '" cy="' + ccd.y + '" r="11" fill="none" stroke="var(--accent-bright)" stroke-width="1.5"/>' : '';
-      svgParts.push(
-        '<g class="map-marker" data-ccd="' + ccd.id + '" data-selected="' + selected + '">' +
-          pulse +
-          '<circle cx="' + ccd.x + '" cy="' + ccd.y + '" r="' + (selected ? 9 : 7) + '" fill="' + fill + '" stroke="' + (selected ? 'var(--paper)' : 'transparent') + '" stroke-width="1.5"/>' +
-          '<text x="' + ccd.x + '" y="' + (ccd.y + 20) + '" text-anchor="middle">' + ccd.nombre + '</text>' +
+      /* Iluminado = rojo pleno; sin reconstruir = el mismo rojo, mucho más oscuro. Todos con un marco gris oscuro muy fino. */
+      var fill = (lit && !lighting) ? 'var(--accent-bright)' : 'var(--accent-dim)';
+      var ringStroke = selected ? 'var(--paper)' : 'var(--pin-outline)';
+      var ringWidth = selected ? 3 : 2;
+
+      markerParts.push(
+        '<g class="map-marker" data-ccd="' + ccd.id + '" data-x="' + ccd.x + '" data-y="' + ccd.y + '" data-rot="' + pinAngle(ccd.id) + '" data-lit="' + lit + '" data-selected="' + selected + '" tabindex="0" role="button" aria-label="' + ccd.nombre + (lit ? ', con víctimas en esta causa' : '') + '">' +
+          '<circle class="hit" cx="' + ccd.x + '" cy="' + (ccd.y - 16) + '" r="19" fill="transparent"/>' +
+          '<g class="pin-body" transform="' + pinTransform(ccd.x, ccd.y, selected, pinAngle(ccd.id)) + '">' +
+            '<path class="pin-shadow" transform="translate(3 4)" d="' + PIN_PATH + '" fill="#000" fill-opacity=".55" filter="url(#softShadow)"/>' +
+            (lit ? '<circle class="pin-glow" cx="50" cy="42" r="36" fill="var(--accent-bright)" filter="url(#pinGlowBlur)"/>' : '') +
+            '<path class="pin-path" d="' + PIN_PATH + '" fill="' + fill + '" stroke="' + ringStroke + '" stroke-width="' + ringWidth + '" stroke-linejoin="round"/>' +
+          '</g>' +
         '</g>'
       );
     });
+    /* Las etiquetas se dibujan al final para que ningún pin vecino las tape */
+    CCDS.forEach(function(ccd){
+      var selected = state.selectedCcd === ccd.id;
+      markerParts.push(
+        '<g class="map-label' + (selected ? ' is-on' : '') + '" data-label="' + ccd.id + '">' +
+          '<rect class="plate" rx="2" ry="2"/>' +
+          '<rect class="tick"/>' +
+          '<text text-anchor="start">' + ccd.nombre + '</text>' +
+        '</g>'
+      );
+    });
+    el.mapMarkersSvg.innerHTML = markerParts.join('');
 
-    el.mapSvg.innerHTML = svgParts.join('');
-    el.mapSvg.querySelectorAll('.map-marker').forEach(function(node){
+    el.mapMarkersSvg.querySelectorAll('.map-marker').forEach(function(node){
+      var id = node.getAttribute('data-ccd');
+      node.addEventListener('mouseenter', function(){ setLabelOn(id, true); });
+      node.addEventListener('mouseleave', function(){ setLabelOn(id, state.selectedCcd === id); });
       node.addEventListener('click', function(){
-        var id = node.getAttribute('data-ccd');
         state.selectedCcd = id;
+        lastPinId = id;
         setSelectedMarker(id);
         openPopup(id, node);
       });
+      node.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); node.dispatchEvent(new Event('click')); }
+      });
+      node.addEventListener('focus', function(){ setLabelOn(id, true); });
+      node.addEventListener('blur', function(){ setLabelOn(id, state.selectedCcd === id); });
+    });
+    layoutMapLabels();
+    if (lighting) lightPins();
+  }
+
+  /* Enciende uno tras otro los sitios de la causa cuando el mapa termina de asentarse */
+  var lightTimers = [];
+  function lightPins(){
+    lightTimers.forEach(clearTimeout);
+    lightTimers = [];
+    var lit = el.mapMarkersSvg.querySelectorAll('.map-marker[data-lit="true"]');
+    Array.prototype.forEach.call(lit, function(node, k){
+      lightTimers.push(setTimeout(function(){
+        var path = node.querySelector('.pin-path');
+        if (path) path.style.fill = 'var(--accent-bright)';
+        node.classList.add('lighting');
+      }, 560 + k * 90));
     });
   }
 
+  var lastPinId = null;
+  /* El foco se mueve solo cuando se navega con teclado; con mouse no hace falta. */
+  var usingKeyboard = false;
+  document.addEventListener('keydown', function(){ usingKeyboard = true; }, true);
+  document.addEventListener('pointerdown', function(){ usingKeyboard = false; }, true);
+
+  function setLabelOn(id, on){
+    var g = el.mapMarkersSvg.querySelector('.map-label[data-label="' + id + '"]');
+    if (g) g.classList.toggle('is-on', !!on);
+  }
+
+  /* Mide cada texto y le dibuja una placa detrás, sin salirse del lienzo. */
+  function layoutMapLabels(){
+    /* El lienzo se escala según la pantalla (modo "cubrir"), así que el tamaño
+       en pantalla se convierte a unidades del lienzo para que la etiqueta
+       mida lo mismo en cualquier monitor. */
+    var r = { width: el.mapMarkersSvg.clientWidth, height: el.mapMarkersSvg.clientHeight };
+    if (!r.width || !r.height) return;
+    var scale = Math.max(r.width / MAP_W, r.height / MAP_H);
+    var u = function(px){ return px / scale; };
+    var fontU = u(14), padX = u(11), padY = u(7), tickW = u(3), gap = u(8);
+    var pinH = PIN_H_UNITS * PIN_SCALE_SELECTED;
+
+    CCDS.forEach(function(ccd){
+      var g = el.mapMarkersSvg.querySelector('.map-label[data-label="' + ccd.id + '"]');
+      if (!g) return;
+      var text = g.querySelector('text');
+      var plate = g.querySelector('.plate');
+      var tick = g.querySelector('.tick');
+      text.style.fontSize = fontU + 'px';
+      var box;
+      try { box = text.getBBox(); } catch (e) { return; }
+      var w = box.width + padX * 2 + tickW;
+      var h = box.height + padY * 2;
+      var left = Math.max(u(12), Math.min(MAP_W - w - u(12), ccd.x - w / 2));
+      var above = ccd.y - pinH - gap - h >= u(12);
+      var top = above ? ccd.y - pinH - gap - h : ccd.y + u(10);
+      plate.setAttribute('x', left);
+      plate.setAttribute('y', top);
+      plate.setAttribute('width', w);
+      plate.setAttribute('height', h);
+      tick.setAttribute('x', left);
+      tick.setAttribute('y', top);
+      tick.setAttribute('width', tickW);
+      tick.setAttribute('height', h);
+      text.setAttribute('x', left + tickW + padX);
+      text.setAttribute('y', top + h / 2 + box.height * 0.3);
+    });
+  }
+  window.addEventListener('resize', function(){ if (state.view === 'mapa') layoutMapLabels(); });
+  if (document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ if (state.view === 'mapa') layoutMapLabels(); });
+  }
+
+  /* Prueba las fuentes de imagen en orden y usa la primera que cargue. */
+  function loadMapBackground(i){
+    if (i >= MAP_IMG_SOURCES.length) return;
+    var probe = new Image();
+    probe.onload = function(){
+      mapBgSrc = MAP_IMG_SOURCES[i];
+      var note = document.getElementById('mapProvisional');
+      if (note) note.hidden = true;
+      if (state.view === 'mapa') buildMapMarkers();
+    };
+    probe.onerror = function(){ loadMapBackground(i + 1); };
+    probe.src = MAP_IMG_SOURCES[i];
+  }
+  loadMapBackground(0);
+
   function setSelectedMarker(id){
-    el.mapSvg.querySelectorAll('.map-marker').forEach(function(node){
+    el.mapMarkersSvg.querySelectorAll('.map-label').forEach(function(g){
+      g.classList.toggle('is-on', g.getAttribute('data-label') === id);
+    });
+    el.mapMarkersSvg.querySelectorAll('.map-marker').forEach(function(node){
       node.dataset.selected = (node.getAttribute('data-ccd') === id) ? 'true' : 'false';
-      var circle = node.querySelector('circle:not(.pulse)');
-      if (circle){
-        circle.setAttribute('r', node.dataset.selected === 'true' ? '9' : '7');
-        circle.setAttribute('stroke', node.dataset.selected === 'true' ? 'var(--paper)' : 'transparent');
+      var pin = node.querySelector('.pin-path');
+      var body = node.querySelector('.pin-body');
+      if (pin && body){
+        var sel = node.dataset.selected === 'true';
+        var isLit = node.getAttribute('data-lit') === 'true';
+        body.setAttribute('transform', pinTransform(node.getAttribute('data-x'), node.getAttribute('data-y'), sel, parseFloat(node.getAttribute('data-rot'))));
+        pin.setAttribute('stroke', sel ? 'var(--paper)' : 'var(--pin-outline)');
+        pin.setAttribute('stroke-width', sel ? '3' : '2');
       }
     });
   }
@@ -1243,6 +1842,7 @@
 
     el.popupVictims.innerHTML = '';
     var rows = getShuffledVictims(ccdId);
+    el.ccdPopup.classList.toggle('is-hospital', ccd.tipo === 'hospital');
     rows.forEach(function(v, i){
       if (i > 0){
         var sep = document.createElement('span');
@@ -1261,33 +1861,25 @@
     positionPopupNearMarker(markerNode);
     el.overlayBackdrop.classList.add('is-open');
     el.ccdPopup.classList.add('is-open');
+    if (usingKeyboard) setTimeout(function(){ el.popupClose.focus({ preventScroll:true }); }, 0);
   }
 
-  function positionPopupNearMarker(markerNode){
+  /* La ficha se abre siempre centrada en la pantalla del mapa, sin importar qué pin se eligió. */
+  function positionPopupNearMarker(){
     var containerRect = screens.mapa.getBoundingClientRect();
-    var markerRect = markerNode.getBoundingClientRect();
     var margin = 14;
+    var maxH = Math.max(240, containerRect.height - margin * 2);
+    el.ccdPopup.style.maxHeight = maxH + 'px';
+    /* la nómina usa todo el alto que deja la cabecera y se desliza solo si no entra */
+    var list = el.ccdPopup.querySelector('.popup-list');
+    if (list){
+      list.style.maxHeight = '';
+      list.style.maxHeight = Math.max(120, maxH - list.offsetTop - 2) + 'px';
+    }
     var popupW = el.ccdPopup.offsetWidth;
     var popupH = el.ccdPopup.offsetHeight;
-
-    var mTop = markerRect.top - containerRect.top;
-    var mLeft = markerRect.left - containerRect.left;
-    var mBottom = markerRect.bottom - containerRect.top;
-    var mCenterX = mLeft + markerRect.width / 2;
-
-    var top = mTop - popupH - margin;
-    if (top < margin) top = mBottom + margin;
-
-    var left = mCenterX - popupW / 2;
-    var maxLeft = containerRect.width - margin - popupW;
-    if (left < margin) left = margin;
-    if (left > maxLeft) left = Math.max(margin, maxLeft);
-
-    var maxTop = containerRect.height - margin - popupH;
-    if (top > maxTop) top = Math.max(margin, maxTop);
-
-    el.ccdPopup.style.top = top + 'px';
-    el.ccdPopup.style.left = left + 'px';
+    el.ccdPopup.style.left = Math.max(margin, (containerRect.width - popupW) / 2) + 'px';
+    el.ccdPopup.style.top = Math.max(margin, (containerRect.height - popupH) / 2) + 'px';
   }
 
   function renderConvictDrawer(){
@@ -1298,7 +1890,7 @@
     relevant.forEach(function(c){
       if (!byForce[c.fuerza]){ byForce[c.fuerza] = {}; order.push(c.fuerza); }
       if (!byForce[c.fuerza][c.condenado]) byForce[c.fuerza][c.condenado] = [];
-      byForce[c.fuerza][c.condenado].push(c.pena);
+      byForce[c.fuerza][c.condenado].push({ pena: c.pena, juicio: c.juicio });
     });
 
     el.convictList.innerHTML = '';
@@ -1325,9 +1917,13 @@
           entry.appendChild(nameEl);
           var penasList = document.createElement('ul');
           penasList.className = 'convict-penas';
-          byForce[force][name].forEach(function(pena){
+          byForce[force][name].forEach(function(item){
             var li = document.createElement('li');
-            li.textContent = pena;
+            li.appendChild(document.createTextNode(item.pena));
+            var causa = document.createElement('span');
+            causa.className = 'pena-causa';
+            causa.textContent = ' · ' + (JUICIOS[item.juicio] ? JUICIOS[item.juicio].nombre : '');
+            li.appendChild(causa);
             penasList.appendChild(li);
           });
           entry.appendChild(penasList);
@@ -1372,6 +1968,10 @@
     state.selectedCcd = null;
     if (state.view === 'mapa') setSelectedMarker(null);
     if (wasOpen) playTick();
+    if (wasOpen && usingKeyboard && state.view === 'mapa' && lastPinId){
+      var back = el.mapMarkersSvg.querySelector('.map-marker[data-ccd="' + lastPinId + '"]');
+      if (back) back.focus({ preventScroll:true });
+    }
   }
 
   el.btnCondenas.addEventListener('click', openDrawer);
@@ -1380,6 +1980,10 @@
   el.overlayBackdrop.addEventListener('click', closeOverlays);
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape') closeOverlays();
+    if (state.view === 'timeline'){
+      if (e.key === 'ArrowRight' && !el.btnNext.hidden && !el.btnNext.disabled) goNext();
+      if (e.key === 'ArrowLeft' && !el.btnPrev.hidden && !el.btnPrev.disabled) goPrev();
+    }
   });
 
   el.btnContinue.addEventListener('click', function(){
@@ -1387,12 +1991,16 @@
     closeOverlays();
     var h = HITOS[state.index];
     h.resuelto = true;
-    setScreen('timeline', 'back');
-    if (state.index < HITOS.length - 1){
-      state.index++;
-    }
-    renderTimeline();
+    /* vuelve a la misma tarjeta (ya con el avance habilitado) y enseguida pasa sola a la siguiente */
+    crossTo('timeline', renderTimeline, 'recede');
     requestAnimationFrame(positionTrack);
+    clearTimeout(autoAdvanceTimer);
+    if (state.index < HITOS.length - 1){
+      var from = state.index;
+      autoAdvanceTimer = setTimeout(function(){
+        if (state.view === 'timeline' && state.index === from) changeHito(from + 1);
+      }, 650);
+    }
   });
 
   /* ------------------------------------------------------------------
@@ -1404,4 +2012,5 @@
 })();
 </script>
 
-</body></html>
+</body>
+</html>
