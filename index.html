@@ -1,13 +1,8 @@
-<!doctype html>
-<html lang="es">
-<head>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
 <title>Zona 233</title>
-<meta name="description" content="La red clandestina de la dictadura en Resistencia. Documental interactivo sobre el Área 233.">
-<meta property="og:title" content="Zona 233">
-<meta property="og:description" content="La red clandestina de la dictadura en Resistencia.">
-<style>[hidden]{display:none!important} img{max-width:100%}</style>
 <style>
   /* Capas: marco de legajo con barra superior fija + una grilla central donde
      cuatro vistas (splash, línea de tiempo, mapa, quiénes somos) se deslizan
@@ -45,9 +40,11 @@
     font-family:var(--font-body);
     overflow:hidden;
     -webkit-font-smoothing:antialiased;
+    -webkit-text-size-adjust:100%; text-size-adjust:100%;
+    overscroll-behavior:none;
   }
   h1,h2,h3{ margin:0; text-wrap:balance; }
-  button{ font-family:inherit; -webkit-tap-highlight-color:transparent; }
+  button{ font-family:inherit; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   :focus-visible{ outline:2px solid var(--paper); outline-offset:3px; }
   ::selection{ background:var(--accent); color:var(--paper); }
   @media (prefers-reduced-motion: reduce){
@@ -83,7 +80,7 @@
   /* ---------- app shell ---------- */
   #app{
     position:relative; z-index:1;
-    height:100%;
+    height:100%; height:100dvh;
     display:flex; flex-direction:column;
   }
 
@@ -180,18 +177,6 @@
   .topbar.is-visible{ animation: introFade .4s ease both; }
   @keyframes introUp{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
 
-  .proto-tag{ pointer-events:none;
-    position:fixed; z-index:50;
-    bottom: max(10px, env(safe-area-inset-bottom, 0px));
-    left: max(12px, env(safe-area-inset-left, 0px));
-    font-family:var(--font-ui);
-    font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase;
-    color: var(--ink-faint);
-    border:1px solid var(--line-strong);
-    padding:4px 8px;
-    background: rgba(11,10,9,.72);
-  }
-
   /* ===================== SPLASH ===================== */
   #splash{
     align-items:center; justify-content:center;
@@ -210,27 +195,6 @@
   .splash-inst img{ display:block; height:28px; width:auto; opacity:.6; }
   @media (max-height:640px){ .splash-inst{ position:static; margin-top:28px; } }
   .splash-logo{ display:block; width:min(72vw, 400px); height:auto; mix-blend-mode:lighten; }
-  .logo-wrap{ display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .logo-line{
-    font-family:var(--font-display);
-    font-size:clamp(40px,11vw,64px);
-    letter-spacing:.12em;
-    line-height:1;
-    color:var(--ink);
-    white-space:pre;
-  }
-  .logo-line .digit3{ color:var(--accent-bright); display:inline-block; }
-  .logo-line .digit3.stamp-in{ animation: stampHit .35s cubic-bezier(.2,1.4,.4,1) both; }
-  @keyframes stampHit{
-    0%{ transform:scale(2.4) rotate(-8deg); opacity:0; }
-    45%{ transform:scale(.88) rotate(2deg); opacity:1; }
-    100%{ transform:scale(1) rotate(0deg); opacity:1; }
-  }
-  .logo-cursor{
-    display:inline-block; width:.5em; background:var(--ink);
-    animation: blink 1s steps(1) infinite;
-  }
-  @keyframes blink{ 50%{ opacity:0; } }
   .tagline{
     font-family:var(--font-ui);
     font-size:var(--fs-sm);
@@ -272,34 +236,63 @@
     position:relative;
     flex:1 1 auto;
     display:flex; align-items:center; justify-content:center;
-    padding: 14px max(16px, env(safe-area-inset-left,0px)) 10px max(16px, env(safe-area-inset-right,0px));
+    padding: 14px max(84px, env(safe-area-inset-left,0px)) 10px max(84px, env(safe-area-inset-right,0px));
     min-height:0;
+    background-color:#0d0b09; overflow:hidden;
   }
+  /* Fondo: el mapa de Resistencia muy desenfocado. Se desplaza y se acerca despacio a medida que avanzan los hitos. */
+  .tl-bg{ position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .tl-bg img{
+    position:absolute; left:50%; top:50%; width:150%; height:150%; max-width:none; object-fit:cover;
+    transform:translate(calc(-50% + var(--bgx, 0%)), calc(-50% + var(--bgy, 0%))) scale(var(--bgz, 1));
+    transition:transform 1.4s cubic-bezier(.45,0,.2,1);
+  }
+  .tl-stage::before{ z-index:1; content:""; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, rgba(11,10,9,0) 50%, rgba(11,10,9,.65) 100%); }
+  /* el sello repetido del fondo se apaga aquí: el mapa borroso ocupa su lugar */
+  body:has(#timeline[data-state="active"]) .watermark-layer{ opacity:0; }
+  .watermark-layer{ transition:opacity .4s ease; }
+  .nav-arrow[hidden]{ display:none; }
   .nav-arrow{
     position:absolute; top:50%; transform:translateY(-50%);
     z-index:3;
-    background:none; border:none;
-    color:var(--ink-dim);
-    font-size:var(--fs-2xl); line-height:1;
-    width:48px; height:64px; padding:0;
+    width:56px; height:56px; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(11,10,9,.72);
+    border:1px solid var(--line-strong);
+    color:var(--ink);
     cursor:pointer;
-    transition: color .2s ease;
+    transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
   }
-  .nav-arrow-prev{ left: max(0px, env(safe-area-inset-left,0px)); }
-  .nav-arrow-next{ right: max(0px, env(safe-area-inset-right,0px)); }
-  .nav-arrow:hover:not(:disabled){ color:var(--accent-bright); }
-  .nav-arrow:disabled{ color:var(--ink-faint); opacity:.35; cursor:default; }
+  .nav-arrow svg{ width:26px; height:26px; display:block; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:square; stroke-linejoin:miter; }
+  .nav-arrow::after{ /* esquinas de legajo */
+    content:""; position:absolute; inset:4px; border:1px solid var(--line); pointer-events:none; transition:border-color .2s ease;
+  }
+  .nav-arrow-prev{ left: max(14px, env(safe-area-inset-left,0px)); }
+  .nav-arrow-next{ right: max(14px, env(safe-area-inset-right,0px)); }
+  .nav-arrow:hover:not(:disabled){ background:var(--accent); border-color:var(--accent-bright); color:var(--paper); }
+  .nav-arrow:hover:not(:disabled)::after{ border-color:rgba(241,233,254,.35); }
+  .nav-arrow-prev:hover:not(:disabled) svg{ transform:translateX(-2px); }
+  .nav-arrow-next:hover:not(:disabled) svg{ transform:translateX(2px); }
+  .nav-arrow svg{ transition:transform .2s ease; }
+  .nav-arrow:disabled{ color:var(--ink-faint); opacity:.4; cursor:default; }
+  /* si el avance espera a que se vea el mapa, la flecha lo insinúa sin gritar */
+  .nav-arrow-next.is-waiting{ border-style:dashed; }
 
   .card{
+    position:relative; z-index:1;
     width:100%; max-width:min(94vw, 960px);
     height:min(72vh, 640px);
     display:grid;
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: 2fr 3fr;
     border:1px solid var(--line-strong);
     background:var(--bg-card);
     min-height:0;
   }
-  .card.side-right{ grid-template-columns: 2fr 1fr; }
+  .card.side-right{ grid-template-columns: 3fr 2fr; }
+  /* Cierre: sin fotografía, una sola columna de lectura */
+  .card.no-photo, .card.no-photo.side-right{ grid-template-columns: 1fr; }
+  .card.no-photo .card-media{ display:none; }
+  .card.no-photo .card-body{ padding:30px max(26px, calc((100% - 700px) / 2)); }  /* mismo ancho que las demás; el texto no se estira de más */
   .card.side-right .card-media{ order:2; }
   .card.side-right .card-body{ order:1; }
 
@@ -354,17 +347,35 @@
     line-height:1.2;
   }
   /* Solo el texto se desliza si es largo: año, título y botón quedan siempre a la vista */
+  .card-text-wrap{ position:relative; flex:1 1 auto; min-height:0; display:flex; }
   .card-text{
     flex:1 1 auto; min-height:0; overflow-y:auto;
-    font-size:var(--fs-md); line-height:1.7; max-width:62ch; color:var(--ink-dim);
-    padding-right:10px;
+    font-family:var(--font-ui); font-size:18px; line-height:1.65; letter-spacing:.01em; max-width:68ch; color:#cfc6b9;
+    hyphens:manual; text-wrap:wrap;
+    padding-right:22px;
+    scrollbar-width:none; -ms-overflow-style:none;
   }
+  .card-text::-webkit-scrollbar{ display:none; }
+  .card-text:focus-visible{ outline-offset:-2px; }
   .card-text.is-scrollable{
-    -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
-            mask-image:linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
-    padding-bottom:24px;
+    -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 44px), transparent);
+            mask-image:linear-gradient(to bottom, #000 calc(100% - 44px), transparent);
+    padding-bottom:4px;
   }
-  .card-text p{ margin:0 0 12px; }
+  .card-text-wrap.is-scrollable{ padding-bottom:24px; }
+  .card-text.is-end{ -webkit-mask-image:none; mask-image:none; }
+  /* Riel propio: una línea fina de tinta con un tirador rojo, como una marca de lápiz de cera */
+  .text-rail{ position:absolute; top:2px; bottom:28px; right:4px; width:2px; background:var(--line-strong); opacity:0; transition:opacity .2s ease; pointer-events:none; }
+  .text-thumb{ position:absolute; left:-1px; width:4px; background:var(--accent-bright); min-height:28px; }
+  .card-text-wrap.is-scrollable .text-rail{ opacity:1; }
+  .text-more{
+    position:absolute; left:0; bottom:0; opacity:0; pointer-events:none;
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text);
+    transition:opacity .2s ease;
+  }
+  .text-more::after{ content:" ↓"; }
+  .card-text-wrap.is-scrollable:not(.is-end) .text-more{ opacity:1; }
+  .card-text p{ margin:0 0 20px; }
   .card-text ul{ list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:10px; }
   .card-text li{ position:relative; padding-left:20px; }
   .card-text li::before{ content:"—"; position:absolute; left:0; color:var(--accent-text); }
@@ -389,8 +400,33 @@
     .card{ grid-template-columns:1fr !important; height:auto; max-height:100%; }
     .card .card-media{ order:initial !important; min-height:140px; border-right:none; border-left:none; border-bottom:1px solid var(--line); }
     .card .card-body{ order:initial !important; }
-    .nav-arrow{ font-size:26px; padding:10px 4px; }
   }
+  /* En pantallas angostas las flechas dejan de flotar sobre la tarjeta y pasan debajo */
+  @media (max-width:900px) and (min-height:521px){
+    .tl-stage{ padding:14px 16px 78px; }
+    .nav-arrow{ top:auto; bottom:12px; transform:none; width:52px; height:52px; }
+    .nav-arrow-prev{ left:16px; } .nav-arrow-next{ right:16px; }
+  }
+
+  /* Barra de avance: un hilo rojo pegado al borde superior de la línea de tiempo */
+  .tl-progress{ position:absolute; top:0; left:0; right:0; height:3px; background:var(--line); z-index:4; pointer-events:none; }
+  .tl-progress span{ display:block; height:100%; width:0; background:var(--accent-bright); transition:width .55s cubic-bezier(.65,0,.35,1); }
+  /* Ir al final: discreto; se enciende cuando ya se recorrió buena parte */
+  .topbar-skip{
+    background:none; border:none; cursor:pointer; padding:10px 0;
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-faint); transition:color .2s ease;
+  }
+  .topbar-skip:hover{ color:var(--ink); }
+  .topbar-skip.is-ready{ color:var(--accent-text); }
+  .topbar-skip.is-ready:hover{ color:var(--paper); }
+  .topbar-skip-confirm{ display:flex; align-items:center; gap:10px; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.08em; text-transform:uppercase; color:var(--ink-dim); }
+  .topbar-skip-confirm button{
+    background:none; border:1px solid var(--line-strong); color:var(--ink); cursor:pointer;
+    font-family:inherit; font-size:inherit; letter-spacing:inherit; text-transform:inherit; padding:7px 12px; min-height:34px;
+  }
+  .topbar-skip-confirm button:hover{ background:var(--accent); border-color:var(--accent-bright); }
+  @media (max-width:620px){ .topbar-skip-confirm .q{ display:none; } }
 
   /* línea de tiempo fija en la base, dinámica y centrada */
   .tl-track-wrap{
@@ -488,7 +524,7 @@
   }
   .map-svg-markers{ z-index:3; pointer-events:none; }
   .map-svg-markers .map-marker{ pointer-events:auto; }
-  .map-bg-img{ filter: grayscale(1) sepia(.3) contrast(1.05) brightness(.92); }
+  .map-bg-img{ }
   .map-provisional{
     position:absolute; z-index:3; left: max(14px, env(safe-area-inset-left,0px)); top:64px;
     font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase;
@@ -518,19 +554,19 @@
 
   .drawer-trigger{
     position:absolute; z-index:3; top:14px; right: max(14px, env(safe-area-inset-right,0px));
-    display:flex; align-items:center; gap:7px;
-    background:var(--bg-raised); border:1px solid var(--accent); color:var(--accent-text);
-    font-family:var(--font-ui); font-size:var(--fs-xs); font-weight:600; letter-spacing:.08em; text-transform:uppercase;
-    padding:10px 14px; min-height:40px; cursor:pointer;
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-raised); border:1px solid var(--accent-bright); color:var(--accent-text);
+    font-family:var(--font-ui); font-size:var(--fs-md); font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    padding:14px 22px; min-height:54px; cursor:pointer;
     transition: background .2s ease, color .2s ease;
   }
   .drawer-trigger:hover{ background:var(--accent); color:var(--paper); }
   .drawer-trigger .count{
     background:var(--accent-bright); color:var(--bg);
-    font-weight:700; font-size:10.5px;
-    min-width:18px; height:18px; border-radius:9px;
+    font-weight:700; font-size:14px;
+    min-width:26px; height:26px; border-radius:13px;
     display:inline-flex; align-items:center; justify-content:center;
-    padding:0 5px;
+    padding:0 7px;
   }
 
   .map-footer{
@@ -587,9 +623,9 @@
   @media (max-width:760px){
     .ccd-popup{ grid-template-columns:1fr; grid-template-areas:"media" "head" "list"; overflow-y:auto; }
     .ccd-popup .popup-list{ overflow:visible !important; max-height:none !important; }
+    .ccd-popup .popup-list-wrap{ max-height:none !important; overflow:visible; }
+    .ccd-popup .popup-list-wrap .text-rail, .ccd-popup .popup-list-wrap .text-more{ display:none; }
   }
-  body:has(.overlay-backdrop.is-open) .proto-tag,
-  body:has(#timeline[data-state="active"]) .proto-tag{ display:none; }
   body:has(.ccd-popup.is-open) .map-label{ opacity:0; }
   .ccd-popup.is-open{ opacity:1; visibility:visible; transform: scale(1); }
   .popup-close{
@@ -610,6 +646,8 @@
     border-right:1px solid var(--line);
   }
   .ccd-popup.is-hospital .popup-media{ border-right:none; }
+  .site-photo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .site-photo[hidden]{ display:none; }
   .popup-media-label{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); padding:7px 10px; }
   .popup-head{
     grid-area:head; min-width:0;
@@ -617,9 +655,24 @@
     display:flex; flex-direction:column; justify-content:flex-end; gap:8px;
     border-bottom:1px solid var(--line);
   }
-  .popup-list{ grid-area:list; min-height:0; overflow-y:auto; padding:16px 26px 22px; display:flex; flex-direction:column; gap:8px; }
+  .popup-list-wrap{ grid-area:list; position:relative; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .popup-list{
+    flex:1 1 auto; min-height:0; overflow-y:auto; padding:16px 34px 22px 26px; display:flex; flex-direction:column; gap:8px;
+    scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .popup-list::-webkit-scrollbar{ display:none; }
+  .popup-list.is-scrollable{
+    -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 46px), transparent);
+            mask-image:linear-gradient(to bottom, #000 calc(100% - 46px), transparent);
+  }
+  .popup-list.is-end{ -webkit-mask-image:none; mask-image:none; }
+  .popup-list-wrap .text-rail{ top:16px; bottom:30px; right:12px; }
+  .popup-list-wrap.is-scrollable .text-rail{ opacity:1; }
+  .popup-list-wrap .text-more{ left:26px; bottom:8px; }
+  .popup-list-wrap.is-scrollable:not(.is-end) .text-more{ opacity:1; }
   .ccd-popup.is-hospital .popup-head{ padding:18px 20px 14px; }
-  .ccd-popup.is-hospital .popup-list{ padding:14px 20px 20px; }
+  .ccd-popup.is-hospital .popup-list{ padding:14px 30px 20px 20px; }
+  .ccd-popup.is-hospital .popup-list-wrap .text-more{ left:20px; }
   .popup-eyebrow{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); }
   .popup-title{ font-family:var(--font-display); font-size:var(--fs-xl); line-height:1.2; }
   .popup-address{ font-size:var(--fs-sm); color:var(--ink-dim); }
@@ -628,15 +681,16 @@
   .victim-flow{ font-size:13px; line-height:1.75; }
   .ccd-popup.is-hospital .victim-flow{ font-size:var(--fs-sm); line-height:1.9; }
   .victim-name.is-focused{ color:var(--ink); font-weight:700; }
-  .victim-name.is-blurred{ color:var(--ink-faint); filter: blur(2.6px); user-select:none; }
+  .victim-name.is-blurred{ color:transparent; text-shadow:0 0 7px rgba(148,139,126,.95); user-select:none; }
   .victim-sep{ color:var(--ink-faint); }
 
   .convict-drawer{
     position:fixed;
-    width:min(360px,88vw);
-    max-height:min(62vh,480px);
-    overflow-y:auto;
-    background:var(--bg-raised);
+    width:min(640px,94vw);
+    max-height:min(calc(100vh - 150px),820px);
+    max-height:min(calc(100dvh - 150px),820px);
+    display:flex; flex-direction:column;
+    background:var(--bg-card);
     border:1px solid var(--line-strong);
     z-index:21;
     opacity:0; visibility:hidden;
@@ -646,26 +700,63 @@
   }
   .convict-drawer.is-open{ opacity:1; visibility:visible; transform: translateY(0) scale(1); }
   .drawer-head{
+    flex:0 0 auto;
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:14px 16px; border-bottom:1px solid var(--line);
-    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim);
+    padding:12px 10px 12px 28px; border-bottom:1px solid var(--line);
   }
+  .drawer-head #drawerTitle{ font-family:var(--font-display); font-size:var(--fs-xl); letter-spacing:.04em; color:var(--ink); }
   .drawer-close{
-    background:none; border:none; color:var(--ink-dim); font-size:var(--fs-lg); line-height:1; cursor:pointer; width:36px; height:36px;
+    background:none; border:none; color:var(--ink-dim); font-size:var(--fs-lg); line-height:1; cursor:pointer; width:40px; height:40px;
   }
   .drawer-close:hover{ color:var(--ink); }
-  .drawer-body{ padding:14px 16px; }
+  /* Contadores: lo primero que se lee */
+  .convict-stats{ flex:0 0 auto; display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--line); }
+  .convict-stat{ padding:16px 28px 14px; }
+  .convict-stat + .convict-stat{ border-left:1px solid var(--line); }
+  .convict-stat .num{ display:block; font-family:var(--font-display); font-size:44px; line-height:1; color:var(--accent-text); font-variant-numeric:tabular-nums; }
+  .convict-stat .lbl{ display:block; margin-top:8px; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); }
+  .drawer-body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:8px 28px 26px; }
 
-  .convict-group{ margin-bottom:16px; }
-  .convict-group:last-child{ margin-bottom:0; }
-  .convict-force{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--accent-text); margin-bottom:8px; }
-  .convict-entry{ margin-bottom:10px; }
-  .convict-name{ font-size:var(--fs-sm); font-weight:700; color:var(--ink); }
-  .convict-penas{ list-style:none; margin:4px 0 0; padding:0; display:flex; flex-direction:column; gap:2px; }
-  .convict-penas li{ font-size:var(--fs-xs); line-height:1.5; color:var(--ink-dim); padding-left:10px; position:relative; }
-  .convict-penas li::before{ content:"—"; position:absolute; left:0; color:var(--ink-faint); }
-  .convict-penas .pena-causa{ color:var(--ink-faint); }
+  .convict-group{ margin-top:18px; }
+  .convict-force{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--accent-text);
+    padding-bottom:7px; border-bottom:1px solid var(--accent); margin-bottom:2px;
+  }
+  .convict-force .n{ color:var(--ink-dim); letter-spacing:.06em; font-variant-numeric:tabular-nums; }
+  .convict-entry{ padding:10px 0 9px; border-bottom:1px dotted var(--line-strong); }
+  .convict-entry:last-child{ border-bottom:none; }
+  .convict-name{ font-family:var(--font-display); font-size:15px; line-height:1.3; color:var(--paper); }
+  /* La pena es lo que se escanea: etiqueta roja alineada a la derecha, aparte del nombre */
+  .pena-tag{
+    flex:0 0 auto; font-family:var(--font-ui); font-size:var(--fs-sm); font-weight:700; letter-spacing:.04em; white-space:nowrap;
+    color:var(--accent-text); border:1px solid var(--accent); padding:2px 9px 1px; background:rgba(138,26,28,.14);
+  }
+  .convict-causa{ margin:0; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.04em; color:var(--ink-faint); }
+  .convict-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:7px; }
   .panel-hint{ font-size:var(--fs-sm); color:var(--ink-faint); line-height:1.6; }
+
+  /* (i): ayuda que se muestra la primera vez y después solo al pasar el cursor o enfocar */
+  .info-btn{
+    flex:0 0 auto; width:22px; height:22px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    background:transparent; border:1px solid var(--ink-dim); color:var(--ink-dim);
+    font-family:var(--font-display); font-size:13px; line-height:1; font-style:italic; cursor:help; padding:0;
+    transition:color .2s ease, border-color .2s ease, background .2s ease;
+  }
+  .info-btn:hover, .info-btn[aria-expanded="true"]{ color:var(--paper); border-color:var(--accent-bright); background:var(--accent); }
+  .info-tip{
+    position:absolute; z-index:6; width:min(300px, 86vw);
+    background:var(--bg); color:var(--ink); border:1px solid var(--line-strong); border-left:3px solid var(--accent-bright);
+    padding:12px 14px; font-family:var(--font-ui); font-size:var(--fs-sm); line-height:1.55; letter-spacing:.01em;
+    opacity:0; visibility:hidden; transform:translateY(4px);
+    transition:opacity .18s ease, transform .18s ease, visibility .18s ease;
+    pointer-events:none;
+  }
+  .info-tip.is-on{ opacity:1; visibility:visible; transform:none; }
+  .popup-victims-title{ display:flex; align-items:center; gap:10px; }
+  .map-info{ pointer-events:auto; align-self:center; }
+  #mapInfoTip{ z-index:7; }
 
   /* ===================== QUIÉNES SOMOS ===================== */
   /* Legajo a dos columnas: a la izquierda el rótulo de cada sección (como la pestaña de
@@ -739,6 +830,144 @@
     .about-credits dt{ border-bottom:none; padding-bottom:0; }
   }
 
+  /* ===================== RESPONSIVE ===================== */
+  /* Barra superior compacta en celulares */
+  .topbar-slot > *{ white-space:nowrap; }
+  @media (max-width:480px){
+    .topbar{ gap:8px; padding-left:max(12px, env(safe-area-inset-left,0px)); padding-right:max(12px, env(safe-area-inset-right,0px)); }
+    .topbar-logo img{ height:20px; }
+    .topbar-right{ gap:10px; }
+    .topbar-slot{ gap:10px; font-size:13px; letter-spacing:.03em; }
+    .topbar-skip, .topbar-back{ letter-spacing:.05em; }
+    .topbar-back .long{ display:none; }
+    .topbar-slot:has(.topbar-skip-confirm) .topbar-count{ display:none; }
+    .topbar-skip-confirm button{ padding:6px 9px; }
+  }
+
+  /* Línea de tiempo en celular vertical: la ficha ocupa todo el alto disponible
+     (foto arriba, texto que se desliza abajo) y las flechas bajan a los extremos de la barra de años. */
+  @media (max-width:620px){
+    .tl-stage{ padding:12px 12px 12px; }
+    .card, .card.side-right{ grid-template-columns:1fr !important; grid-template-rows:minmax(0, 32%) minmax(0, 1fr); height:100%; max-height:none; max-width:none; }
+    .card.no-photo, .card.no-photo.side-right{ grid-template-rows:minmax(0, 1fr); }
+    .card .card-media{ min-height:0; }
+    .card-body{ padding:16px 18px 18px; gap:10px; }
+    .card.no-photo .card-body{ padding:20px 20px; }
+    .card-year-stamp{ font-size:var(--fs-lg); padding:7px 11px 5px; }
+    .card-year-stamp.is-long{ font-size:15px; }
+    .card-title{ font-size:22px; }
+    .card-text{ font-size:17px; line-height:1.6; padding-right:16px; }
+    .card-text p{ margin-bottom:16px; }
+    .card-cta{ align-self:stretch; text-align:center; }
+    .nav-arrow{ position:fixed; top:auto; transform:none; width:44px; height:44px; z-index:5;
+      bottom:calc(18px + env(safe-area-inset-bottom,0px)); }
+    .nav-arrow svg{ width:22px; height:22px; }
+    .nav-arrow-prev{ left:max(8px, env(safe-area-inset-left,0px)); }
+    .nav-arrow-next{ right:max(8px, env(safe-area-inset-right,0px)); }
+    .tl-track-viewport{ -webkit-mask-image:linear-gradient(to right, transparent 44px, #000 30%, #000 70%, transparent calc(100% - 44px));
+                                mask-image:linear-gradient(to right, transparent 44px, #000 30%, #000 70%, transparent calc(100% - 44px)); }
+  }
+
+  /* Pantallas bajas (celular acostado): todo más apretado para que la ficha respire */
+  @media (max-height:520px){
+    .topbar{ padding-top:calc(6px + env(safe-area-inset-top,0px)); padding-bottom:6px; }
+    .sound-toggle{ width:32px; height:32px; }
+    .tl-stage{ padding-top:8px; padding-bottom:8px; }
+    .tl-track-wrap{ padding:4px 0 calc(4px + env(safe-area-inset-bottom,0px)); }
+    .tl-track-viewport{ height:46px; padding-top:8px; }
+    .tl-track-inner{ top:8px; }
+    .card{ height:100%; max-height:none; }
+    .card-body{ padding:12px 18px 14px; gap:7px; }
+    .card.no-photo .card-body{ padding-top:14px; padding-bottom:14px; }
+    .card-year-stamp{ font-size:15px; padding:5px 9px 4px; }
+    .card-year-stamp.is-long{ font-size:13px; }
+    .card-title{ font-size:20px; }
+    .card-text{ font-size:16px; line-height:1.55; }
+    .card-text p{ margin-bottom:12px; }
+    .card-cta{ padding:8px 14px; min-height:38px; font-size:13px; }
+    .nav-arrow{ width:46px; height:46px; }
+    /* portada */
+    #splash{ overflow-y:auto; justify-content:flex-start; padding-top:calc(14px + env(safe-area-inset-top,0px)); }
+    .splash-inner{ gap:10px; margin:auto 0; }
+    .splash-logo{ width:min(72vw, 400px, calc(36vh * 1.63)); }
+    .tagline{ margin:0; }
+    .start-btn{ margin-top:2px; padding:11px 26px; min-height:44px; }
+    .about-link{ margin-top:6px; }
+    .splash-inst{ position:static; margin-top:16px; }
+    .splash-inst img{ height:22px; }
+    /* mapa */
+    .map-subheader{ padding-top:8px; padding-bottom:22px; }
+    .map-footer{ padding-top:24px; padding-bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
+    .drawer-trigger{ top:8px; padding:8px 14px; min-height:42px; font-size:14px; }
+  }
+
+  /* Mapa en pantallas angostas: el botón de condenas baja junto a "¿Cómo siguió?" para no tapar el título */
+  @media (max-width:760px){
+    .map-subheader{ padding-top:12px; row-gap:4px; }
+    .map-eyebrow{ flex-basis:100%; }
+    .map-title{ font-size:15px; }
+    .drawer-trigger{ top:auto; right:auto; left:max(12px, env(safe-area-inset-left,0px));
+      bottom:calc(14px + env(safe-area-inset-bottom,0px));
+      padding:10px 14px; min-height:44px; font-size:14px; gap:8px; letter-spacing:.08em; }
+    .drawer-trigger .count{ min-width:22px; height:22px; font-size:12px; }
+    .map-footer{ flex-direction:column; align-items:flex-end; gap:8px; padding-right:max(12px, env(safe-area-inset-right,0px));
+      padding-bottom:calc(14px + env(safe-area-inset-bottom,0px)); }
+    .map-attrib{ margin-right:0; font-size:11px; }
+    .continue-btn{ min-height:44px; padding:10px 16px; }
+  }
+  @media (max-width:760px) and (max-height:520px){
+    .map-footer{ padding-bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
+    .drawer-trigger{ bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
+  }
+
+  /* Ficha del sitio y condenas en pantallas chicas o bajas: la ficha entera se desliza
+     y las condenas se abren como una hoja desde abajo */
+  @media (max-height:560px){
+    .ccd-popup{ overflow-y:auto; }
+    .ccd-popup .popup-list{ overflow:visible !important; max-height:none !important; }
+    .ccd-popup .popup-list-wrap{ max-height:none !important; overflow:visible; }
+    .ccd-popup .popup-list-wrap .text-rail, .ccd-popup .popup-list-wrap .text-more{ display:none; }
+    .ccd-popup .popup-list.is-scrollable{ -webkit-mask-image:none; mask-image:none; }
+    .popup-head{ padding:16px 56px 14px 20px; }
+    .popup-title{ font-size:20px; }
+  }
+  @media (max-width:760px){
+    .ccd-popup .popup-list.is-scrollable{ -webkit-mask-image:none; mask-image:none; }
+    .popup-head{ padding:16px 56px 14px 18px; }
+    .popup-title{ font-size:20px; }
+    .popup-list{ padding:14px 18px 20px; }
+  }
+  @media (max-width:760px), (max-height:560px){
+    .convict-drawer{ left:0 !important; right:0 !important; top:auto !important; bottom:0; width:100%;
+      max-height:86%; border-left:none; border-right:none; border-bottom:none;
+      transform:translateY(24px); transform-origin:bottom center;
+      padding-bottom:env(safe-area-inset-bottom,0px); }
+    .convict-drawer.is-open{ transform:none; }
+    .drawer-head{ padding-left:20px; }
+    .convict-stat{ padding:12px 20px 10px; }
+    .convict-stat .num{ font-size:34px; }
+    .drawer-body{ padding:4px 20px 22px; }
+  }
+  @media (max-width:420px){
+    .convict-row{ flex-wrap:wrap; gap:6px 10px; }
+  }
+
+  /* En pantallas táctiles el estado "hover" queda pegado después de tocar: se neutraliza */
+  @media (hover:none){
+    .nav-arrow:hover:not(:disabled){ background:rgba(11,10,9,.72); border-color:var(--line-strong); color:var(--ink); }
+    .nav-arrow:hover:not(:disabled)::after{ border-color:var(--line); }
+    .nav-arrow-prev:hover:not(:disabled) svg, .nav-arrow-next:hover:not(:disabled) svg{ transform:none; }
+    .card-cta:hover{ background:transparent; color:var(--accent-text); }
+    .drawer-trigger:hover{ background:var(--bg-raised); color:var(--accent-text); }
+    .nav-arrow:active:not(:disabled), .card-cta:active, .drawer-trigger:active{ background:var(--accent); color:var(--paper); }
+  }
+
+  /* En pantallas táctiles el mapa entra sin desenfoque (es lo más costoso de dibujar) */
+  @media (hover:none), (max-width:760px){
+    @keyframes mapInLite{ from{ transform:scale(1.08); opacity:0; } to{ transform:none; opacity:1; } }
+    #mapa.map-intro .map-svg{ animation-name:mapInLite; }
+  }
+
   .sr-only{
     position:absolute; width:1px; height:1px; padding:0; margin:-1px;
     overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
@@ -747,10 +976,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Archivo+Narrow:wght@400;600;700&display=swap" rel="stylesheet">
 
-</head>
-<body>
 <svg class="watermark-layer" aria-hidden="true">
   <defs>
     <pattern id="stampPattern" width="280" height="190" patternUnits="userSpaceOnUse" patternTransform="rotate(-16)">
@@ -760,7 +987,6 @@
   </defs>
   <rect width="100%" height="100%" fill="url(#stampPattern)"></rect>
 </svg>
-
 
 <div id="app">
 
@@ -788,28 +1014,36 @@
       </div>
       <div class="splash-inst" aria-label="Instituciones">
         <img src="assets/img/logo-unne-fadycc.png" alt="Universidad Nacional del Nordeste · Facultad de Artes, Diseño y Ciencias de la Cultura" width="129" height="24">
+        <img src="assets/img/logo-semiii.png" alt="Seminario de Integración: Imagen, Sonido y Multimedia III" width="77" height="24">
         <img src="assets/img/logo-cpm.png" alt="Comisión Provincial por la Memoria del Chaco" width="99" height="24">
       </div>
     </section>
 
     <!-- ===================== LÍNEA DE TIEMPO ===================== -->
     <section id="timeline" class="screen" data-state="hidden">
-      <div class="tl-stage grain">
-        <button class="nav-arrow nav-arrow-prev" id="btnPrev" type="button" aria-label="Hito anterior">‹</button>
+      <div class="tl-progress" aria-hidden="true"><span id="tlProgressFill"></span></div>
+      <div class="tl-stage">
+        <div class="tl-bg" aria-hidden="true"><img id="tlBgImg" src="assets/img/mapa-fondo.webp" alt="" decoding="async"></div>
+        <button class="nav-arrow nav-arrow-prev" id="btnPrev" type="button" aria-label="Hito anterior"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 L7 12 L15 20"/></svg></button>
 
         <article class="card grain" id="card">
           <div class="card-media">
+            <img class="site-photo" id="cardPhoto" alt="" decoding="async" hidden>
             <div class="card-media-label" id="cardMediaLabel">Foto de archivo — pendiente</div>
           </div>
           <div class="card-body">
             <div class="card-year-stamp" id="cardYear">2003</div>
             <h2 class="card-title" id="cardTitle">Título de prueba</h2>
-            <div class="card-text" id="cardText">Texto de prueba.</div>
+            <div class="card-text-wrap" id="cardTextWrap">
+              <div class="card-text" id="cardText" tabindex="-1" lang="es">Texto de prueba.</div>
+              <div class="text-rail" aria-hidden="true"><div class="text-thumb" id="textThumb"></div></div>
+              <div class="text-more" aria-hidden="true">Seguí leyendo</div>
+            </div>
             <button class="card-cta" id="cardCta" type="button" hidden>¿Qué se reconstruyó?</button>
           </div>
         </article>
 
-        <button class="nav-arrow nav-arrow-next" id="btnNext" type="button" aria-label="Siguiente hito">›</button>
+        <button class="nav-arrow nav-arrow-next" id="btnNext" type="button" aria-label="Siguiente hito"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 L17 12 L9 20"/></svg></button>
       </div>
 
       <div class="tl-track-wrap">
@@ -823,8 +1057,9 @@
     <!-- ===================== MAPA ===================== -->
     <section id="mapa" class="screen" data-state="hidden">
       <div class="map-subheader">
-        <span class="map-eyebrow">¿Qué se reconstruyó?</span>
+        <span class="map-eyebrow" id="mapEyebrow">¿Qué se reconstruyó?</span>
         <span class="map-title" id="mapJuicioNombre">Nombre del juicio de prueba</span>
+        <button class="info-btn map-info" id="mapInfoBtn" type="button" aria-label="Cómo leer este mapa" aria-describedby="mapInfoTip" aria-expanded="false">i</button>
       </div>
 
       <div class="map-stage">
@@ -844,28 +1079,39 @@
         <button class="continue-btn" id="btnContinue" type="button">¿Cómo siguió?</button>
       </div>
 
+      <div class="info-tip" id="mapInfoTip" role="tooltip">Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.</div>
+
       <!-- overlays -->
       <div class="overlay-backdrop" id="overlayBackdrop"></div>
 
       <div class="ccd-popup" id="ccdPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
         <button class="popup-close" id="popupClose" type="button" aria-label="Cerrar">×</button>
-        <div class="popup-media"><div class="popup-media-label" id="popupMediaLabel">Fotografía del sitio — pendiente</div></div>
+        <div class="popup-media"><img class="site-photo" id="popupPhoto" alt="" decoding="async" hidden><div class="popup-media-label" id="popupMediaLabel">Fotografía del sitio — pendiente</div></div>
         <div class="popup-head">
-          <div class="popup-eyebrow">Centro clandestino</div>
+          <div class="popup-eyebrow" id="popupEyebrow">Centro clandestino</div>
           <h3 class="popup-title" id="popupTitle">Nombre del sitio</h3>
           <div class="popup-address" id="popupAddress">Dirección de prueba</div>
         </div>
-        <div class="popup-list">
-          <div class="popup-victims-heading">Nómina</div>
+        <div class="popup-list-wrap" id="popupListWrap">
+        <div class="popup-list" id="popupList">
+          <div class="popup-victims-title">
+            <div class="popup-victims-heading">Personas que pasaron por este centro</div>
+            <button class="info-btn" id="victimsInfoBtn" type="button" aria-label="Qué significa esta lista" aria-describedby="victimsTip" aria-expanded="false">i</button>
+          </div>
           <div class="victim-flow" id="popupVictims"></div>
         </div>
+        <div class="text-rail" aria-hidden="true"><div class="text-thumb" id="popupThumb"></div></div>
+        <div class="text-more" aria-hidden="true">Seguí leyendo</div>
+        </div>
+        <div class="info-tip" id="victimsTip" role="tooltip"></div>
       </div>
 
       <div class="convict-drawer" id="convictDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
         <div class="drawer-head">
-          <span id="drawerTitle">Imputados y condenas — acumulado</span>
+          <span id="drawerTitle">Condenas</span>
           <button class="drawer-close" id="drawerClose" type="button" aria-label="Cerrar">×</button>
         </div>
+        <div class="convict-stats" id="convictStats"></div>
         <div class="drawer-body" id="convictList"></div>
       </div>
     </section>
@@ -914,6 +1160,7 @@
               </ul>
               <div class="about-logos">
                 <img src="assets/img/logo-unne-fadycc.png" alt="Universidad Nacional del Nordeste · Facultad de Artes, Diseño y Ciencias de la Cultura" width="237" height="44">
+                <img src="assets/img/logo-semiii.png" alt="Seminario de Integración: Imagen, Sonido y Multimedia III" width="141" height="44">
                 <img src="assets/img/logo-cpm.png" alt="Comisión Provincial por la Memoria del Chaco" width="182" height="44">
               </div>
             </div>
@@ -949,9 +1196,11 @@
             <div class="about-label"><h3>Créditos</h3></div>
             <dl class="about-body about-credits">
               <dt>Fuentes</dt>
-              <dd>Sentencias de las causas de lesa humanidad juzgadas en Resistencia. <span class="pending">Detalle de tribunales y expedientes pendiente.</span></dd>
+              <dd>Sentencias de las causas de lesa humanidad juzgadas en Resistencia.</dd>
               <dt>Fotografías</dt>
-              <dd><span class="pending">Pendiente.</span></dd>
+              <dd>Prensa CPM (fotos de los juicios)<br>Gonzalo Torres (fotos de los juicios)<br>Plataforma Memoria Abierta (foto de la sanción de la Ley 25.779)</dd>
+              <dt>Libro</dt>
+              <dd>«Pensar el Chaco desde la dictadura. 50 años del golpe», capítulo «La reconstrucción del Terrorismo de Estado en el Chaco» (Bruno Martinez, Diego Vigay).</dd>
               <dt>Cartografía</dt>
               <dd>© <a href="https://www.mapbox.com/about/maps/" target="_blank" rel="noopener">Mapbox</a> · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></dd>
               <dt>Tipografías</dt>
@@ -983,14 +1232,14 @@
      lienzo del mapa (1280x680), calculadas desde lat/lon con proyección Web
      Mercator para el encuadre MAP_VIEW. Si cambia el encuadre, se recalculan. */
   var CCDS = [
-    { id:'ccd1', nombre:'Brigada de Investigaciones Marcelo T. de Alvear', direccion:'Dirección pendiente de carga', lat:-27.44998171041852, lon:-58.98580178811233, x:740.8, y:257.5 },
-    { id:'ccd2', tipo:'hospital', nombre:'Hospital Perrando', direccion:'Dirección pendiente de carga', lat:-27.4593730935916, lon:-58.97700165692545, x:813.8, y:345.3 },
-    { id:'ccd3', nombre:'Jefatura de Policía de la Provincia', direccion:'Dirección pendiente de carga', lat:-27.4396240000542, lon:-58.99921264659869, x:629.5, y:160.6 },
-    { id:'ccd4', nombre:'Grupo de Artillería N°7 La Liguria', direccion:'Dirección pendiente de carga', lat:-27.47799747374264, lon:-58.95639471833886, x:984.7, y:519.4 },
-    { id:'ccd5', nombre:'Unidad Penal Federal N°7', direccion:'Dirección pendiente de carga', lat:-27.46993347648468, lon:-58.99305889550067, x:680.6, y:444.0 },
-    { id:'ccd6', nombre:'Alcaidía Provincial de Resistencia', direccion:'Dirección pendiente de carga', lat:-27.45519314302465, lon:-59.0395063357934, x:295.3, y:306.2 },
-    { id:'ccd7', nombre:'Brigada de Investigaciones Juan B. Justo', direccion:'Dirección pendiente de carga', lat:-27.45545945296473, lon:-58.98317888574821, x:762.5, y:308.7 },
-    { id:'ccd8', tipo:'hospital', nombre:'Hospital para la Madre y el Niño', direccion:'Dirección pendiente de carga', lat:-27.45021559308352, lon:-58.9910211588202, x:697.5, y:259.7 }
+    { id:'ccd1', nombre:'Brigada de Investigaciones Marcelo T. de Alvear', direccion:'Marcelo T. de Alvear 32', imagen:'assets/img/sitios/ccd1.webp', lat:-27.44998171041852, lon:-58.98580178811233, x:740.8, y:257.5 },
+    { id:'ccd2', tipo:'hospital', nombre:'Hospital Perrando', direccion:'Av. 9 de Julio 1100', imagen:'assets/img/sitios/ccd2.webp', lat:-27.4593730935916, lon:-58.97700165692545, x:813.8, y:345.3 },
+    { id:'ccd3', nombre:'Jefatura de Policía de la Provincia', direccion:'Av. 25 de Mayo 1410', imagen:'assets/img/sitios/ccd3.webp', lat:-27.4396240000542, lon:-58.99921264659869, x:629.5, y:160.6 },
+    { id:'ccd4', nombre:'Grupo de Artillería N°7 La Liguria', direccion:'Av. 9 de Julio 3300', imagen:'assets/img/sitios/ccd4.webp', lat:-27.47799747374264, lon:-58.95639471833886, x:984.7, y:519.4 },
+    { id:'ccd5', nombre:'Unidad Penal Federal N°7', direccion:'Av. Las Heras 1565', imagen:'assets/img/sitios/ccd5.webp', lat:-27.46993347648468, lon:-58.99305889550067, x:680.6, y:444.0 },
+    { id:'ccd6', nombre:'Alcaidía Provincial de Resistencia', direccion:'Ushuaia s/n, Villa Barberán', imagen:'assets/img/sitios/ccd6.webp', lat:-27.45519314302465, lon:-59.0395063357934, x:295.3, y:306.2 },
+    { id:'ccd7', nombre:'Brigada de Investigaciones Juan B. Justo', direccion:'Juan B. Justo 473', imagen:'assets/img/sitios/ccd7.webp', lat:-27.45545945296473, lon:-58.98317888574821, x:762.5, y:308.7 },
+    { id:'ccd8', tipo:'hospital', nombre:'Hospital para la Madre y el Niño', direccion:'Juan Domingo Perón 330', imagen:'assets/img/sitios/ccd8.webp', lat:-27.45021559308352, lon:-58.9910211588202, x:697.5, y:259.7 }
   ];
 
   /* Mapa real (Mapbox, estilo propio). Se prueba primero un archivo local
@@ -1001,9 +1250,13 @@
      apoya sobre la coordenada del sitio; el círculo interior es un hueco. */
   var PIN_PATH = 'M50 10 C32.33 10 18 24.33 18 42 C18 64 50 115 50 115 C50 115 82 64 82 42 C82 24.33 67.67 10 50 10 Z M50 56 C42.27 56 36 49.73 36 42 C36 34.27 42.27 28 50 28 C57.73 28 64 34.27 64 42 C64 49.73 57.73 56 50 56 Z';
   var PIN_TIP_X = 50, PIN_TIP_Y = 115, PIN_H_UNITS = 105;
-  var PIN_SCALE = 0.30, PIN_SCALE_SELECTED = 0.36;
+  var PIN_SCALE = 0.30;
+  var PIN_MIN_PX = 28;   /* en pantallas chicas el pin no baja de este alto, para poder tocarlo */
+  /* Encuadre visible del lienzo y escala de los pines; se recalculan con el tamaño de la pantalla */
+  var mapView = { x:0, y:0, w:1280, h:680, k:1, pin:0.30, letterbox:false };
+  function pinK(selected){ return mapView.pin * (selected ? 1.2 : 1); }
   function pinTransform(x, y, selected, angle){
-    var k = selected ? PIN_SCALE_SELECTED : PIN_SCALE;
+    var k = pinK(selected);
     return 'translate(' + x + ' ' + y + ') rotate(' + (angle || 0) + ') scale(' + k + ') translate(' + (-PIN_TIP_X) + ' ' + (-PIN_TIP_Y) + ')';
   }
   /* Inclinación de ±3° fija para cada sitio (siempre la misma, como un sello puesto a mano) */
@@ -1011,20 +1264,20 @@
     var rnd = seededRandom(hashStr('pin:' + ccdId));
     return Math.round(((rnd() * 2 - 1) * 3) * 10) / 10;
   }
-  var MAP_VIEW = { lon:-58.99795, lat:-27.45881, zoom:12.51 };
+  /* Encuadre del mapa: lon -58.99795, lat -27.45881, zoom 12.51 */
   /* El mapa es una imagen fija generada con la Static Images API de Mapbox (estilo
      maxtl07/cmvmqp3s3000g01rz7v1u2nzx, encuadre MAP_VIEW, 1280x680@2x). El token no
      va en el código: para regenerar la imagen se usa desde la cuenta de Mapbox. */
-  var MAP_IMG_SOURCES = ['assets/img/mapa-resistencia.png'];
+  var MAP_IMG_SOURCES = ['assets/img/mapa-resistencia.webp'];
   var mapBgSrc = null;
 
   /* @@DATOS-INICIO */
   /* Generado desde la planilla editable de Zona 233 (no editar a mano: se regenera). */
-  var VICTIMAS = [{"nombre": "María José Teresa Presa de Parodi", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Elsa Siria Quiroz", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Rubén Alcides Arce", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gregorio Magno Quintana", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Daniel Enrique Ferracini", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Fernández", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Walter Valentín Medina", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "José Niveyro", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Eduardo Lenscak", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Vicente Cantero", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "María Graciela de la Rosa", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Nora del Valle Giménez de Valladares", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Héctor Rolando Berger", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Roberto Alcides Greca", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gerardo Delgado", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Rodolfo Amado Sobko", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Héctor Edgardo Costas", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Sergio Romero", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Olga Esther Chamorro", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gladis Graciela del Carmen Borrini", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Mario Augusto Arqueros", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "José Luis Núñez", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Raúl Luis Copello", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Antonio Heraldo Prieto", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Aureliano Villán", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "José Saavedra", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Walter Valentín Medina", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "José Niveyro", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Vicente Cantero", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Santiago Almada", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Juan Manuel González", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Luis Albano Rossi", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Eusebio Dolores Esquivel", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Gerardo Delgado", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Rodolfo Amado Sobko", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Roberto Alcides Greca", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Héctor Edgardo Costas", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Raúl Fernando Junco", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Leopoldo Jordán", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Dante Peinó", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "José Luis Valenzuela", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Ricardo Alejandro Vassel", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Elvira Esther Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "María Gregoria Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Santiago Almada", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Juan Manuel González", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Luis Albano Rossi", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Néstor Silvio Navarro", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Roberto Ramón Tribbia", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Aníbal Ponti", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Rubén Darío Vassel", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Eligia Flor", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Antonio Oscar Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Mirta Mabel Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "José Saavedra", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Carlos Alberto Zamudio", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Fernando Gabriel Piérola", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Alcides Bosch", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Roberto Horacio Yedro", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Alberto Díaz", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Juan Manuel Roldán", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Carlos Enrique Tereszecuk", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Raúl María Caire", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Delicia González", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Alcides Bosch", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Aníbal Ponti", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Belzor Miño", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Miguel \"Gato\" Sánchez", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Juan Fernández", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Miguel Ángel Bampini", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "José Niveyro", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Julio Andrés Pereyra", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Alberto Díaz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Roberto Horacio Yedro", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Zamudio", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Fernando Gabriel Piérola", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "José Luis Valenzuela", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Alejandro Vassel", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Manuel Roldán", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Adolfo Galo", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Miguel Marciano López", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Roberto Cejas", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Omar Rodolfo Lana", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Aníbal Ponti", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Fernández", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Miguel Ángel Bampini", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Belzor Miño", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Daniel Omar Aguirre", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Santiago Martínez Cortez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Pedro Dinani", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Rodolfo Bustamante", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "María Graciela de la Rosa", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Elsa Siria Quiroz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Delicia González", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Julio Andrés Pereyra", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Eusebio Dolores Esquivel", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd5", "juicio": "j3"}, {"nombre": "Cristóbal Martínez Cortez", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Miguel Jerónimo Salinas", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Pedro Crisólogo Morel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Sara Fulvia Ayala de Morel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Raúl Gómez Lemos", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rodolfo Bustamante", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Aurelio Díaz", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Víctor Rodríguez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Humberto Arce", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rogelio Domingo Tomasella", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "José Horacio Oviedo", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "María Elena Rossi", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Raúl Ceferino Lazzatti", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ana Chara", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Pedro Agustín Lovey", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Marcelino Ismael Zequeira", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Elías José Guzmán", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Fidel Gómez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Vladimiro Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Vicente Karpiu", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Kielnichuk", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Braulio Linka", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "José Cabrera", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Alberto Miño", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Pedro Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Dionisio Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Alberto Rómulo D'Alessandro", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Santiago Rivera", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Dolores Flores", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Nemesio Machuca", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Erlindo Evelio Pérez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Laszczuk", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Martín Guzmán", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Leonardo Mendieta", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Oscar Salvador D'Alessandro", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Felipe Dante Piccoli", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Jara", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Maestro Ortiz", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Testa", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Lorenzo Elvio Borrini", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Víctor Hugo Arroyo", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Adolfo Adrián Coronel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rafael Coronel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Mario Horacio Pezzelato", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd3", "juicio": "j4"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd3", "juicio": "j4"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Nora del Valle Giménez de Valladares", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Daniel Enrique Ferracini", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "María Elena Rossi", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "María José Teresa Presa de Parodi", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Santos Britez", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Hipólito Britez", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Modesto Meza", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Santos Britez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Hipólito Britez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Modesto Meza", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Leopoldo Jordán", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Osvaldo Raúl Lovey", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Avelina de León", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Luis Juan Rodríguez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Chávez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Felipe Dante Piccoli", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Ciril Ivanoff", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Lázaro Frías / José Álvarez Frías Benítez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Aníbal Ponti", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "María Gregoria Pérez", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Juan Eduardo Lenscak", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Hugo Peino", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Elvira Haydee Acuña", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Hugo Peino", "ccd": "ccd6", "juicio": "j6"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Walter Rodolfo Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "David Reinaldo Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ramón Ricardo Giménez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ermelindo Aguirre", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Marcelino Aguirre", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Manuel Roque Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Jorge Héctor Castro", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "María de los Milagros Demiryi", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Raúl Luis Copello", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Juan Manuel González", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Rolando Alfredo Azcona", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Roberto Alfredo Valetto", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Adolfo Galo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Susana Graciela Diez de los Ríos", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Mencho Campos", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Quirulo Ortiz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Pato Ortiz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Norma Beatriz Medawar", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Juan Carlos Rodríguez Urbina", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Guillermo Niveiro", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Cristina Alicia Figueredo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Diego Martín Romero", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "María Esther Figueredo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ernesto Luis Martínez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Rosa Alcaraz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Mónica Judith Almirón de Lauroni", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Enzo Lauroni", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Abel Arce", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Gerardo Delgado", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Ramón Arcángel Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Marcelino Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Sofía Ester Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Zenón Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Juan Manuel González", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Ramón Arcángel Hanríquez", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Roberto Alfredo Valetto", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Olga Esther Chamorro", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Sergio Romero", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Oscar Gómez", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Zaldívar", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Ludueña", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Adolfo José Ibarra", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Santiago Almada", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Norma Beatriz Medawar", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Juan Carlos Rodríguez Urbina", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "\"Gordo\" Meza", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Gutiérrez", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Miño", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Pira", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Graciela Isabel Britez", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "\"Polaca\" Insfrán", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Roberto Cejas", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Lázaro Castro", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "María de los Milagros Demiryi", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd2", "juicio": "j10"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd4", "juicio": "j10"}, {"nombre": "Carlos Enrique Tereszecuk", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Luis Caire / Quirel", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd5", "juicio": "j11"}];
+  var VICTIMAS = [{"nombre": "María José Teresa Presa de Parodi", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Elsa Siria Quiroz", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Rubén Alcides Arce", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gregorio Magno Quintana", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Daniel Enrique Ferracini", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Fernández", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Walter Valentín Medina", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "José Niveyro", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Eduardo Lenscak", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Vicente Cantero", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "María Graciela de la Rosa", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Nora del Valle Giménez de Valladares", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Héctor Rolando Berger", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Roberto Alcides Greca", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gerardo Delgado", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Rodolfo Amado Sobko", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Héctor Edgardo Costas", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Sergio Romero", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Olga Esther Chamorro", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Gladis Graciela del Carmen Borrini", "ccd": "ccd1", "juicio": "j1"}, {"nombre": "Mario Augusto Arqueros", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "José Luis Núñez", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Raúl Luis Copello", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Antonio Heraldo Prieto", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Aureliano Villán", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "José Saavedra", "ccd": "ccd5", "juicio": "j1"}, {"nombre": "Walter Valentín Medina", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "José Niveyro", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Vicente Cantero", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Santiago Almada", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Juan Manuel González", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Luis Albano Rossi", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Eusebio Dolores Esquivel", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Gerardo Delgado", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Rodolfo Amado Sobko", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Roberto Alcides Greca", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Héctor Edgardo Costas", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Raúl Fernando Junco", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Leopoldo Jordán", "ccd": "ccd6", "juicio": "j1"}, {"nombre": "Carlos Dante Peinó", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "José Luis Valenzuela", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Ricardo Alejandro Vassel", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Elvira Esther Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "María Gregoria Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Santiago Almada", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Juan Manuel González", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Luis Albano Rossi", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Néstor Silvio Navarro", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Roberto Ramón Tribbia", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Aníbal Ponti", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Rubén Darío Vassel", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Eligia Flor", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Antonio Oscar Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Mirta Mabel Pérez", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "José Saavedra", "ccd": "ccd7", "juicio": "j1"}, {"nombre": "María José Teresa Presa de Parodi", "ccd": "ccd8", "juicio": "j1"}, {"nombre": "Carlos Alberto Zamudio", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Fernando Gabriel Piérola", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Alcides Bosch", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Roberto Horacio Yedro", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Luis Alberto Díaz", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Juan Manuel Roldán", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Carlos Enrique Tereszecuk", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Raúl María Caire", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Delicia González", "ccd": "ccd1", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Alcides Bosch", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd4", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Aníbal Ponti", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Belzor Miño", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Miguel \"Gato\" Sánchez", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Emilio Eduardo Saliva", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Juan Fernández", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Miguel Ángel Bampini", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Carlos Erasmo Aguirre", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "José Niveyro", "ccd": "ccd5", "juicio": "j2"}, {"nombre": "Patricio Blas Tierno", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Mario Cuevas", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Manuel Parodi Ocampo", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Arturo Franzen", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Néstor Carlos Sala", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Ángel Barco", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Julio Andrés Pereyra", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Luis Alberto Díaz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Roberto Horacio Yedro", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Zamudio", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Fernando Gabriel Piérola", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "José Luis Valenzuela", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Alejandro Vassel", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Manuel Roldán", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Adolfo Galo", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Miguel Marciano López", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Roberto Cejas", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Omar Rodolfo Lana", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Aníbal Ponti", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Fernández", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Miguel Ángel Bampini", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Eduardo Campos", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Luis Migueles", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Osvaldo Raúl Uferer", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Ricardo Fortunato Ilde", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Jorge Belzor Miño", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Guillermo Jorge Giles", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Daniel Omar Aguirre", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Santiago Martínez Cortez", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Pedro Dinani", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Rodolfo Bustamante", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Mirta Susana Clara", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "María Graciela de la Rosa", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Elsa Siria Quiroz", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Delicia González", "ccd": "ccd6", "juicio": "j2"}, {"nombre": "Carlos Alberto Duarte", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Julio Andrés Pereyra", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Eusebio Dolores Esquivel", "ccd": "ccd1", "juicio": "j3"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd5", "juicio": "j3"}, {"nombre": "Cristóbal Martínez Cortez", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Miguel Jerónimo Salinas", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd6", "juicio": "j3"}, {"nombre": "Pedro Crisólogo Morel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Sara Fulvia Ayala de Morel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Raúl Gómez Lemos", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rodolfo Bustamante", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Aurelio Díaz", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Víctor Rodríguez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Humberto Arce", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rogelio Domingo Tomasella", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "José Horacio Oviedo", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "María Elena Rossi", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Raúl Ceferino Lazzatti", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ana Chara", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Pedro Agustín Lovey", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Marcelino Ismael Zequeira", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Elías José Guzmán", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Fidel Gómez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Vladimiro Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Vicente Karpiu", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Kielnichuk", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Braulio Linka", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "José Cabrera", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Alberto Miño", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Pedro Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Dionisio Sokol", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Alberto Rómulo D'Alessandro", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Santiago Rivera", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Dolores Flores", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Nemesio Machuca", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Erlindo Evelio Pérez", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Juan Laszczuk", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Ramón Martín Guzmán", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Leonardo Mendieta", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Oscar Salvador D'Alessandro", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Felipe Dante Piccoli", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Jara", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Maestro Ortiz", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Testa", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Lorenzo Elvio Borrini", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Julio Argentino Cossio", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Víctor Hugo Arroyo", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Adolfo Adrián Coronel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Rafael Coronel", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Mario Horacio Pezzelato", "ccd": "ccd1", "juicio": "j4"}, {"nombre": "Julio Baltazar Aranda", "ccd": "ccd3", "juicio": "j4"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd3", "juicio": "j4"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Nora del Valle Giménez de Valladares", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Daniel Enrique Ferracini", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "María Elena Rossi", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "María José Teresa Presa de Parodi", "ccd": "ccd6", "juicio": "j4"}, {"nombre": "Sara Fulvia Ayala de Morel", "ccd": "ccd8", "juicio": "j4"}, {"nombre": "Santos Britez", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Hipólito Britez", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Modesto Meza", "ccd": "ccd6", "juicio": "j5"}, {"nombre": "Santos Britez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Hipólito Britez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Modesto Meza", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Leopoldo Jordán", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Osvaldo Raúl Lovey", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Avelina de León", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Luis Juan Rodríguez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Chávez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Felipe Dante Piccoli", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Ciril Ivanoff", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Ángel Mauricio Berger", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Lázaro Frías / José Álvarez Frías Benítez", "ccd": "ccd7", "juicio": "j5"}, {"nombre": "Aníbal Ponti", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "María Gregoria Pérez", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd1", "juicio": "j6"}, {"nombre": "Hugo Alberto Dedieu", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd4", "juicio": "j6"}, {"nombre": "Carlos Raúl Aranda", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Juan Eduardo Lenscak", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Juan Simón Argañaraz", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Raúl Horacio Cracogna", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Hugo Peino", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Elvira Haydee Acuña", "ccd": "ccd5", "juicio": "j6"}, {"nombre": "Hugo Peino", "ccd": "ccd6", "juicio": "j6"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Walter Rodolfo Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "David Reinaldo Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ramón Ricardo Giménez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ermelindo Aguirre", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Marcelino Aguirre", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Manuel Roque Benítez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Jorge Héctor Castro", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "María de los Milagros Demiryi", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Raúl Luis Copello", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Juan Manuel González", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Rolando Alfredo Azcona", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Roberto Alfredo Valetto", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Adolfo Galo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Susana Graciela Diez de los Ríos", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Mencho Campos", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Quirulo Ortiz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Pato Ortiz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Norma Beatriz Medawar", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Juan Carlos Rodríguez Urbina", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Guillermo Niveiro", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Cristina Alicia Figueredo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Diego Martín Romero", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "María Esther Figueredo", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Ernesto Luis Martínez", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Rosa Alcaraz", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Mónica Judith Almirón de Lauroni", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Enzo Lauroni", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Abel Arce", "ccd": "ccd1", "juicio": "j7"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Juan Carlos Goya", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Gerardo Delgado", "ccd": "ccd4", "juicio": "j7"}, {"nombre": "Ramón Arcángel Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Marcelino Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Sofía Ester Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Zenón Hanríquez", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Juan Manuel González", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd5", "juicio": "j7"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Ramón Arcángel Hanríquez", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Argentino Edgardo García", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Roberto Alfredo Valetto", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Luis Eugenio Alarcón", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Silvia Mónica Robles", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Oscar Alberto Varela", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Olga Esther Chamorro", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Sergio Romero", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd6", "juicio": "j7"}, {"nombre": "Miguel Ángel Molfino", "ccd": "ccd2", "juicio": "j7"}, {"nombre": "Oscar Gómez", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Zaldívar", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Ludueña", "ccd": "ccd1", "juicio": "j9"}, {"nombre": "Ricardo Antonio Uferer", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Ramón Eduardo Luque", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Adolfo José Ibarra", "ccd": "ccd4", "juicio": "j9"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Santiago Almada", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Norberto Mario Mendoza", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Víctor Fermín Giménez", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Francisco Aníbal Perié", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd5", "juicio": "j9"}, {"nombre": "Norma Beatriz Medawar", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Juan Carlos Rodríguez Urbina", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "\"Gordo\" Meza", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Gutiérrez", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Miño", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Pira", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Graciela Isabel Britez", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "\"Polaca\" Insfrán", "ccd": "ccd6", "juicio": "j9"}, {"nombre": "Saturnino Ferreira", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Armando Atilio Benítez", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Escolástica Esperanza Riveros", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Roberto Cejas", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Lázaro Castro", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "María de los Milagros Demiryi", "ccd": "ccd7", "juicio": "j9"}, {"nombre": "Hugo Ramón Barúa", "ccd": "ccd2", "juicio": "j10"}, {"nombre": "Eugenio Domínguez Silva", "ccd": "ccd4", "juicio": "j10"}, {"nombre": "Carlos Enrique Tereszecuk", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Reinaldo Amalio Zapata Soñez", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Luis Caire / Quirel", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Emma Beatriz Cabral", "ccd": "ccd3", "juicio": "j11"}, {"nombre": "Antonio Eduardo Zárate", "ccd": "ccd5", "juicio": "j11"}];
 
   var CONDENAS = [{"juicio": "j1", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Humberto Lucio Caballero", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Ramón Esteban Meza", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Rubén Héctor Roldán", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Francisco Orlando Álvarez", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Oscar Alberto Galarza", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Ramón Andrés Gandola", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j1", "condenado": "Enzo Breard", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j1", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "25 años de prisión"}, {"juicio": "j2", "condenado": "Athos Gustavo Renés", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Jorge Daniel Rafael Carnero Sabol", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Horacio Losito", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Aldo Héctor Martínez Segón", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Ricardo Guillermo Reyes", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Ernesto Jorge Simoni", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Germán Emilio Riquelme", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j3", "condenado": "Norberto Raúl Tozzo", "fuerza": "Ejército Argentino", "pena": "24 años de prisión"}, {"juicio": "j4", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "19 años de prisión"}, {"juicio": "j4", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j4", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j4", "condenado": "Albino Luis Borda", "fuerza": "Policía de la Provincia del Chaco", "pena": "22 años de prisión"}, {"juicio": "j4", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "20 años de prisión"}, {"juicio": "j4", "condenado": "Ramón Esteban Meza", "fuerza": "Policía de la Provincia del Chaco", "pena": "19 años de prisión"}, {"juicio": "j4", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j4", "condenado": "Enzo Breard", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j4", "condenado": "Ángel Jorge Ibarra", "fuerza": "Policía de la Provincia del Chaco", "pena": "12 años de prisión"}, {"juicio": "j4", "condenado": "Antonio Musa Azar", "fuerza": "Policía de la Provincia de Santiago del Estero", "pena": "10 años de prisión"}, {"juicio": "j4", "condenado": "Miguel Tomás Garbi", "fuerza": "Policía de la Provincia de Santiago del Estero", "pena": "10 años de prisión"}, {"juicio": "j5", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j5", "condenado": "Alcides Roberto Safenraiter", "fuerza": "Policía de la Provincia del Chaco", "pena": "Prisión perpetua"}, {"juicio": "j5", "condenado": "Eduardo Wischnivetzki", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j5", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "4 años de prisión"}, {"juicio": "j6", "condenado": "Roberto Domingo Mazzoni", "fuerza": "Poder Judicial de la Nación (Justicia Federal)", "pena": "11 años de prisión"}, {"juicio": "j6", "condenado": "César Pablo Casco", "fuerza": "Servicio Penitenciario Federal (SPF)", "pena": "11 años de prisión"}, {"juicio": "j7", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "11 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "7 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j7", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j7", "condenado": "Francisco Orlando Álvarez", "fuerza": "Policía de la Provincia del Chaco", "pena": "14 años de prisión"}, {"juicio": "j7", "condenado": "Ángel Jorge Ibarra", "fuerza": "Policía de la Provincia del Chaco", "pena": "6 años de prisión"}, {"juicio": "j7", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "3 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "César Pablo Casco", "fuerza": "Servicio Penitenciario Federal (SPF)", "pena": "3 años y 9 meses de prisión"}, {"juicio": "j8", "condenado": "Alfredo Luis Chas", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j9", "condenado": "Aldo Héctor Martínez Segón", "fuerza": "Ejército Argentino", "pena": "14 años de prisión"}, {"juicio": "j9", "condenado": "Ricardo Guillermo Reyes", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Ernesto Jorge Simoni", "fuerza": "Ejército Argentino", "pena": "10 años de prisión"}, {"juicio": "j9", "condenado": "Carlos Domingo Mora", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j9", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "14 años de prisión"}, {"juicio": "j9", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Miguel Ángel Vitorello", "fuerza": "Policía de la Provincia del Chaco", "pena": "10 años de prisión"}, {"juicio": "j9", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "9 años de prisión"}, {"juicio": "j10", "condenado": "Roberto Domingo Mazzoni", "fuerza": "Poder Judicial de la Nación (Justicia Federal)", "pena": "5 años y 6 meses de prisión"}];
 
-  var JUICIOS = {"j1": {"nombre": "Causa Caballero I", "ccdsIluminados": ["ccd1", "ccd5", "ccd6", "ccd7"]}, "j2": {"nombre": "Causa Masacre de Margarita Belén I", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6"]}, "j3": {"nombre": "Causa Masacre de Margarita Belén II", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j4": {"nombre": "Causa Caballero II", "ccdsIluminados": ["ccd1", "ccd3", "ccd6"]}, "j5": {"nombre": "Causa Ligas Agrarias", "ccdsIluminados": ["ccd6", "ccd7"]}, "j6": {"nombre": "Causa Complicidad Judicial I", "ccdsIluminados": ["ccd1", "ccd3", "ccd4", "ccd5", "ccd6"]}, "j7": {"nombre": "Causa Caballero III", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6"]}, "j8": {"nombre": "Causa Masacre de Margarita Belén III", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j9": {"nombre": "Causa Conscriptos", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j10": {"nombre": "Causa Complicidad Judicial II", "ccdsIluminados": ["ccd2", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j11": {"nombre": "Causa por el Derecho a la Verdad", "ccdsIluminados": ["ccd1", "ccd3", "ccd5", "ccd6"]}};
+  var JUICIOS = {"j1": {"nombre": "Causa Caballero I", "ccdsIluminados": ["ccd1", "ccd5", "ccd6", "ccd7", "ccd8"]}, "j2": {"nombre": "Causa Masacre de Margarita Belén I", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6"]}, "j3": {"nombre": "Causa Masacre de Margarita Belén II", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j4": {"nombre": "Causa Caballero II", "ccdsIluminados": ["ccd1", "ccd3", "ccd6", "ccd8"]}, "j5": {"nombre": "Causa Ligas Agrarias", "ccdsIluminados": ["ccd6", "ccd7"]}, "j6": {"nombre": "Causa Complicidad Judicial I", "ccdsIluminados": ["ccd1", "ccd3", "ccd4", "ccd5", "ccd6"]}, "j7": {"nombre": "Causa Caballero III", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6", "ccd2"]}, "j8": {"nombre": "Causa Masacre de Margarita Belén III", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j9": {"nombre": "Causa Conscriptos", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j10": {"nombre": "Causa Complicidad Judicial II", "ccdsIluminados": ["ccd2", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j11": {"nombre": "Causa por el Derecho a la Verdad", "ccdsIluminados": ["ccd1", "ccd3", "ccd5", "ccd6"]}};
 
   var HITOS = [
     {
@@ -1032,16 +1285,18 @@
       "year": "2003",
       "fecha": "2003",
       "title": "Sanción de la Ley 25.779",
-      "text": "Texto pendiente de carga.",
-      "tieneJuicio": false
+      "text": "Durante casi dos décadas, las leyes de Punto Final (1986) y Obediencia Debida (1987), junto con los indultos presidenciales otorgados por Carlos Saúl Menem, garantizaron un cerco de impunidad que impidió juzgar a los responsables del terrorismo de Estado en los tribunales y retrotrajo los avances alcanzados en el histórico Juicio a las Juntas. Frente a esa protección institucional a los genocidas, la resistencia social se sostuvo en las calles: el reclamo inquebrantable que Madres, Abuelas, familiares y sobrevivientes sostenían desde la propia dictadura se vio revitalizado en los años noventa con la irrupción de HIJOS, que introdujo los escraches públicos como herramienta de condena social frente a represores, asesinos y torturadores que continuaban viviendo en libertad.\nEn agosto de 2003, esa acumulación de luchas históricas confluyó con la voluntad política del gobierno nacional de convertir a los Derechos Humanos en una política de Estado prioritaria. El Congreso de la Nación sancionó la Ley 25.779, declarando la nulidad absoluta de las leyes de impunidad. Esta decisión, ratificada posteriormente por la Corte Suprema de Justicia de la Nación, reabrió el camino procesal para investigar y juzgar los crímenes de lesa humanidad en los tribunales federales de todo el país, sentando las bases institucionales para que los responsables del terrorismo de Estado fueran finalmente juzgados en un proceso de justicia que ya no tendría marcha atrás.",
+      "tieneJuicio": false,
+      "imagen": "assets/img/hitos/h1.webp"
     },
     {
       "id": "h2",
       "year": "2005",
       "fecha": "2005",
       "title": "Recuperación de la Casa por la Memoria",
-      "text": "Texto pendiente de carga.",
-      "tieneJuicio": false
+      "text": "En el Chaco, la demanda por Memoria, Verdad y Justicia se mantuvo viva gracias a una militancia incansable frente al olvido. Mucho antes de las audiencias públicas de los juicios orales, familiares y sobrevivientes impulsaron hitos fundamentales en la búsqueda de justicia, como las caravanas por la Masacre de Margarita Belén, la investigación de la Comisión de Derechos Humanos de la Cámara de Diputados, el mural de Amanda Mayor de Piérola en el Aula Magna de la UNNE, los Juicios populares por la Verdad y la conformación de la Comisión Provincial por la Memoria. Todo ese trabajo colectivo de recolección testimonial y archivo permitió reconstruir tempranamente la trama represiva en la provincia, sosteniendo la denuncia histórica cuando la justicia todavía no intervenía.\nEste proceso alcanzó un hito material decisivo en 2005 con la recuperación del edificio ubicado en Marcelo T. de Alvear 32, donde funcionó la Dirección de Investigaciones de la Policía del Chaco. Lo que durante la dictadura operó como el principal centro clandestino de detención y tortura de la provincia fue restituido a la comunidad para dar origen a la Casa por la Memoria. Recuperando ese espacio no solo como un museo de los archivos probatorios de las víctimas, sino como un espacio de pedagogía, debate ciudadano y memoria activa de referencia para toda la región.",
+      "tieneJuicio": false,
+      "imagen": "assets/img/hitos/h2.webp"
     },
     {
       "id": "h3",
@@ -1050,6 +1305,7 @@
       "title": "Causa Caballero I",
       "text": "En 2010, tras siete meses de audiencias orales, se dictó la sentencia de la Causa Caballero I, caratulada así por el represor que encabezaba las acusaciones. Con más de 100 testimonios de sobrevivientes, familiares y peritos, inspecciones oculares, y pericias del Equipo Argentino de Antropología Forense, el fallo marcó un hito histórico siendo el primer juicio de lesa humanidad en la provincia del Chaco, quebrando más de 3 décadas de impunidad para las víctimas, los familiares y los organismos de derechos humanos.\nA través del proceso se reconstruyeron aspectos estructurales del terrorismo de Estado en la provincia:\n* La causa acreditó que el accionar represivo comenzó meses antes del golpe de Estado, con secuestros desde el 9 de septiembre de 1975 fundados en persecuciones puramente políticas e ideológicas contra militantes de centros de estudiantes, la Juventud Universitaria Peronista, Montoneros, las Ligas Agrarias y sectores eclesiásticos.\n* Se constató la existencia y la articulación del circuito represivo local, identificando el funcionamiento de la Dirección de Investigaciones en Marcelo T. de Alvear, su posterior funcionamiento en la calle Juan B. Justo y la Alcaidía Policial de Resistencia.\n* Se expuso la operatoria de grupos de choque que tenían a su cargo allanamientos ilegales, saqueos de pertenencias, secuestros sin órdenes judiciales, y dentro de los centros clandestinos la aplicación de tormentos y torturas físicas. Destacándose la jefatura operativa del sargento Gabino Manader.\nRechazando los planteos de prescripción tipificando los hechos como delitos de lesa humanidad se condenó a 12 imputados acreditando 26 víctimas directas del delito de tormentos agravados a las que se sumaron el testimonio de más de 75 testigos que sufrieron diferentes vejaciones de sus derechos en esta época.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h3.webp",
       "juicio": "j1",
       "resuelto": false
     },
@@ -1058,8 +1314,9 @@
       "year": "2011",
       "fecha": "16 de mayo de 2011",
       "title": "Causa Masacre de Margarita Belén I",
-      "text": "Texto pendiente de carga.",
+      "text": "En mayo de 2011, tras casi un año de debate, culminó el primer juicio por los fusilamientos perpetrados el 13 de diciembre de 1976 en cercanías de la localidad de Margarita Belén.\nDespués de más de cincuenta audiencias de debate oral, quedó acreditado cómo se montó como pantalla un supuesto intento de rescate y fuga durante un aparente traslado a Formosa, cuando en realidad se trataba de una ejecución sumaria planificada.\nSe reconstruyó que, durante la madrugada de ese día, los detenidos políticos, todos ellos pertenecientes a Montoneros y a la Juventud Peronista, fueron concentrados y salvajemente golpeados en la Alcaidía Policial, para luego ser trasladados al lugar del crimen. El destino de sus restos fue dispar: algunos fueron entregados a sus familias, incluso con identidades cambiadas, mientras que otros continúan desaparecidos. En 2014, la identificación del cuerpo de Julio Andrés Pereyra, sepultado como NN en la localidad correntina de Empedrado, permitió reconstruir el intento de desaparición de cuerpos arrojándolos al río Paraná.\nEl proceso concluyó con la condena a prisión perpetua de ocho oficiales del Ejército Argentino por homicidio agravado por alevosía y desaparición forzada.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h4.webp",
       "juicio": "j2",
       "resuelto": false
     },
@@ -1068,8 +1325,9 @@
       "year": "2013",
       "fecha": "8 de marzo de 2013",
       "title": "Causa Masacre de Margarita Belén II",
-      "text": "Texto pendiente de carga.",
+      "text": "Como continuidad del juzgamiento por los crímenes de 1976, en mayo de 2013 culminó el segundo proceso judicial por la causa Margarita Belén II. El debate oral abordó la responsabilidad penal del capitán del Ejército y oficial de Inteligencia Norberto Raúl Tozzo, quien tras permanecer prófugo de la justicia fue localizado y extraditado desde la República Federativa del Brasil.\n\nDebido a los límites fijados por el fallo de extradición del Supremo Tribunal Federal de Brasil —que consideró prescripta la acción penal por homicidio pero habilitó el juzgamiento por considerar el secuestro como un delito permanente—, el debate se centró en la desaparición forzada de Fernando Piérola, Roberto Horacio Yedro, Reynaldo Zapata Soñez y Julio Andrés Pereyra. Asimismo, el proceso permitió incorporar documentación clave que probó la planificación previa del falso traslado bajo el denominado «Operativo Rojo», ordenado por el mando militar.\n\nEl Tribunal Oral Federal declaró los hechos como crímenes de lesa humanidad y condenó a Norberto Raúl Tozzo a 24 años de prisión como coautor de desaparición forzada, sentando un precedente fundamental sobre la eficacia de la cooperación judicial internacional para capturar y juzgar a represores prófugos en el exterior.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h5.webp",
       "juicio": "j3",
       "resuelto": false
     },
@@ -1078,8 +1336,9 @@
       "year": "2018",
       "fecha": "13 de agosto de 2018",
       "title": "Causa Caballero II",
-      "text": "Texto pendiente de carga.",
+      "text": "En 2018 culminó el debate oral de la causa Caballero II, proceso centrado en los crímenes de lesa humanidad cometidos en el centro clandestino de la Dirección de Investigaciones (Marcelo T. de Alvear 32). El fallo representó un hito judicial al probar que esta dependencia no solo operó como centro de torturas sistemáticas, sino también como un centro de exterminio.\n\nA lo largo del proceso se dictaron las primeras condenas por desaparición forzada en la provincia, tras acreditarse el secuestro de los militantes del PRT Pedro Morel y Sara Fulvia Ayala. Asimismo, el tribunal juzgó y sancionó por primera vez de manera autónoma los delitos de violación y violencia sexual contra las mujeres cautivas, estableciendo que formaron parte del plan represivo como métodos de dominación y tortura estatal. La causa demostró también la coordinación interestatal del grupo de tareas local con mandos del Ejército Argentino y la cúpula policial de Santiago del Estero, encabezada por Antonio Musa Azar y Miguel Garbi.\n\nEl Tribunal Oral Federal condenó a 11 represores a penas de entre 10 y 25 años de prisión, ratificando el carácter permanente del delito de desaparición forzada y profundizando el desmantelamiento judicial del circuito represivo en Resistencia.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h6.webp",
       "juicio": "j4",
       "resuelto": false
     },
@@ -1088,8 +1347,9 @@
       "year": "2019",
       "fecha": "11 de julio de 2019",
       "title": "Causa Ligas Agrarias",
-      "text": "Texto pendiente de carga.",
+      "text": "En 2019 se dictó la sentencia del proceso que juzgó los crímenes de lesa humanidad cometidos contra dirigentes, militantes y trabajadores rurales del interior de la provincia. Si bien las violaciones a los derechos humanos padecidas por miembros de esta organización ya habían sido abordadas de forma parcial en los juicios Caballero y en las causas por la Masacre de Margarita Belén, este debate oral resultó fundamental para esclarecer el plan sistemático de represión en el territorio rural chaqueño.\nLa causa acreditó la persecución generalizada desplegada contra las Ligas Agrarias del Chaco, un movimiento que nucleaba a pequeños productores y campesinos que impulsaban reclamos históricos por el precio justo del algodón, el acceso a la tierra y el desarrollo cooperativo frente a la marginación social.\nAsimismo, el fallo dejó al descubierto cómo el aparato militar y policial montó la simulación de falsos «enfrentamientos» para encubrir emboscadas y fusilamientos sumarios, como los de los dirigentes Raúl «Naró» Gómez Estigarribia y Carlos Piccoli, confirmando una mecánica de exterminio repetida en toda la provincia.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h7.webp",
       "juicio": "j5",
       "resuelto": false
     },
@@ -1098,8 +1358,9 @@
       "year": "2019",
       "fecha": "16 de octubre de 2019",
       "title": "Causa Complicidad Judicial I",
-      "text": "Texto pendiente de carga.",
+      "text": "En 2019 concluyó el debate oral de la causa Complicidad Judicial I, un hito clave que desentrañó el rol del Poder Judicial y del Servicio Penitenciario Federal en el terrorismo de Estado en el Chaco.\n\nLa sentencia acreditó la complicidad de funcionarios judiciales que garantizaron la impunidad del régimen. En particular, se probó que el exfiscal federal y exsecretario Roberto Domingo Mazzoni omitió deliberadamente investigar y dar curso a las denuncias de presos políticos por torturas y tormentos que presentaban marcas evidentes de picana y golpes, llegando a amedrentar a las víctimas en su propio despacho. Paralelamente, el juicio expuso el funcionamiento de la Cárcel Federal U7 como pieza del engranaje represivo: se demostró que el oficial penitenciario Pablo César Casco sometió a los prisioneros a un régimen de aislamiento, hambre deliberada y severas golpizas, particularmente durante los traslados hacia los Consejos de Guerra en el Regimiento de La Liguria.\n\nAl tipificar los hechos como delitos de lesa humanidad e imprescriptibles, el tribunal condenó a Roberto Mazzoni a 11 años de prisión por apremios ilegales y omisión de deberes de funcionario público, y a Pablo César Casco a 11 años de prisión por tormentos agravados contra los presos políticos.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h8.webp",
       "juicio": "j6",
       "resuelto": false
     },
@@ -1108,8 +1369,9 @@
       "year": "2021",
       "fecha": "30 de abril de 2021",
       "title": "Causa Caballero III",
-      "text": "Texto pendiente de carga.",
+      "text": "En 2021 se dictó la sentencia de la causa Caballero III, que juzgó crímenes de lesa humanidad cometidos entre 1974 y 1979 contra 32 víctimas. El proceso profundizó la reconstrucción de la red clandestina del Área Militar 233, articulada entre la Brigada de Investigaciones, la Alcaidía Policial y la Cárcel Federal U7.\n\nEl fallo sentó un precedente histórico fundamental al juzgar los delitos con perspectiva de género, condenando la violencia sexual ejercida contra personas cautivas como un método deliberado y sistemático de degradación física y psicológica. Asimismo, la causa visibilizó por primera vez la privación ilegítima de la libertad sufrida por dos niños de seis meses y dos años, cautivos junto a sus madres en condiciones infrahumanas dentro de la Brigada de Investigaciones. La sentencia también acreditó el hostigamiento selectivo de la «Guardia Ayala» en la Alcaidía y la reducción premeditada de raciones de comida en la U7 como política de quebrantamiento moral y físico.\n\nEl tribunal ratificó la imprescriptibilidad de los crímenes y fijó condenas de hasta 25 años de prisión para integrantes del Ejército, la Policía del Chaco y guardiacárceles.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h9.webp",
       "juicio": "j7",
       "resuelto": false
     },
@@ -1118,8 +1380,9 @@
       "year": "2021",
       "fecha": "14 de mayo de 2021",
       "title": "Causa Masacre de Margarita Belén III",
-      "text": "Texto pendiente de carga.",
+      "text": "En abril de 2021 se dictó sentencia en Margarita Belén III, juicio que determinó de forma concluyente la participación operativa y logística de la Policía del Chaco en los fusilamientos del 13 de diciembre de 1976, tras revocarse la absolución del excomisario Alfredo Luis Chas.\n\nEl proceso desarmó definitivamente la coartada policial y la farsa del falso enfrentamiento. Quedó judicialmente probado que Chas, en su rol de oficial ayudante y jefe de logística de Tránsito de la policía provincial, preparó el patrullero Torino Z-3, reclutó suboficiales, los proveyó de armamento de guerra (fusiles FAL y escopetas Ithaca) y equipó al móvil con radio de alta frecuencia para informar a la Jefatura de Policía y a La Liguria. La misión de la comisión policial fue indispensable: bloquear la Ruta Nacional 11 para asegurar el perímetro y garantizar la clandestinidad absoluta del fusilamiento militar.\n\nEl tribunal consideró probado que Chas actuó con pleno conocimiento del plan y lo condenó a 15 años de prisión e inhabilitación absoluta como partícipe secundario de homicidio agravado por alevosía y desaparición forzada.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h10.webp",
       "juicio": "j8",
       "resuelto": false
     },
@@ -1128,8 +1391,9 @@
       "year": "2022",
       "fecha": "1 de julio de 2022",
       "title": "Causa Conscriptos",
-      "text": "Texto pendiente de carga.",
+      "text": "En 2022 culminó el debate de la causa «Conscriptos» (acumulada con «Comisario Mora»), que abordó una operatoria inédita: el secuestro, persecución y tortura de jóvenes que realizaban el Servicio Militar Obligatorio en el Grupo de Artillería 7 (Regimiento de La Liguria).\n\nLa causa probó cómo soldados conscriptos como Ricardo Antonio Uferer y Ramón Eduardo Luque —militantes de la Juventud Peronista— fueron catalogados por la inteligencia militar como «infiltrados» y entregados por sus propios mandos a las patotas policiales para ser torturados en la Brigada de Investigaciones y en la Alcaidía. El fallo expuso la coordinación directa entre los oficiales de inteligencia del Ejército y el comisario general Domingo Mora.\n\nEste juicio constituyó un hito doctrinario histórico al ser la primera sentencia en el Chaco que calificó los crímenes como genocidio, tipificándolo como un «genocidio reorganizador» destinado a quebrar la disidencia social y política para imponer un modelo socioeconómico regresivo. Se dictaron condenas contra los altos mandos del Ejército (Martínez Segón, Reyes y Simoni), el comisario Domingo Mora y guardiacárceles de la Alcaidía.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h11.webp",
       "juicio": "j9",
       "resuelto": false
     },
@@ -1138,8 +1402,9 @@
       "year": "2024",
       "fecha": "19 de marzo de 2024",
       "title": "Causa Complicidad Judicial II",
-      "text": "Texto pendiente de carga.",
+      "text": "En marzo de 2024 concluyó el juicio Complicidad Judicial II, centrado en la responsabilidad penal individual del exfiscal federal Roberto Domingo Mazzoni por hechos cometidos con anterioridad al golpe de Estado.\n\nEl debate oral acreditó que el 9 de septiembre de 1975, mientras se desempeñaba como secretario del Juzgado Federal, Mazzoni integró personalmente la comisión que allanó violentamente la vivienda de Hugo Ramón Barúa, militante de la Juventud Peronista. La sentencia probó que Mazzoni presenció y avaló las agresiones con armas, amenazas y tormentos aplicados por los represores policiales Gabino Manader y José Cardozo, utilizando su investidura judicial para otorgar un manto de cobertura legal al secuestro. Se expusieron además las graves secuelas padecidas por Barúa, quien tras ser sometido a condiciones inhumanas en la Alcaidía contrajo tuberculosis y debió permanecer internado en coma durante treinta días en el Hospital Perrando, encadenado a la cama.\n\nEl tribunal condenó a Roberto Mazzoni a 5 años y 6 meses de prisión por privación ilegal de la libertad y tormentos en calidad de partícipe necesario, unificándose con su condena previa.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h12.webp",
       "juicio": "j10",
       "resuelto": false
     },
@@ -1148,8 +1413,9 @@
       "year": "2025",
       "fecha": "11 de noviembre de 2025",
       "title": "Causa por el Derecho a la Verdad",
-      "text": "Texto pendiente de carga.",
+      "text": "El 11 de noviembre de 2025, la jueza federal Zunilda Niremperger dictó una histórica sentencia por el Derecho a la Verdad en el caso de Carlos Enrique Tereszecuk, militante estudiantil desaparecido en noviembre de 1976, ante la imposibilidad de avanzar por la vía penal debido al fallecimiento de los principales represores imputados (Thomas, Ceniquel y Caballero).\n\nEl fallo sentó dos precedentes territoriales y probatorios de enorme trascendencia:\n\nLa Jefatura de Policía como Centro Clandestino: A partir de los testimonios de los sobrevivientes Carlos Aranda, Julio Aranda y Antonio Zárate, se probó formalmente que en el primer piso de la Jefatura de Policía de Resistencia —donde residía el jefe de la fuerza— funcionó un Centro Clandestino de Detención y Exterminio coordinado por fuerzas conjuntas del Ejército y la Policía.\n\nLa sistemática de arrojar cuerpos al río Paraná: El fallo acreditó judicialmente que arrojar víctimas a las aguas del río Paraná fue un patrón planificado de desaparición de cuerpos en el Área 233. Se constató la metodología común sobre los restos hallados en Empedrado (Corrientes) —como los de Tereszecuk, Rómulo Artieda y Julio Pereyra—: maniatados con alambre, disparos a corta distancia, yemas de dedos amputadas y cortes en el abdomen para impedir que flotaran.\n\nAunque de naturaleza no punitiva, la resolución constituyó un acto fundamental de reparación histórica para las familias y la memoria regional.",
       "tieneJuicio": true,
+      "imagen": "assets/img/hitos/h13.webp",
       "juicio": "j11",
       "resuelto": false
     },
@@ -1158,7 +1424,7 @@
       "year": "Ahora",
       "fecha": "Ahora",
       "title": "Cómo siguen las causas",
-      "text": "Texto pendiente de carga.",
+      "text": "A medio siglo del golpe de Estado del 24 de marzo de 1976, el camino recorrido en nuestra provincia representa una conquista histórica irrenunciable: más de una decena de juicios orales, más de treinta represores condenados y la confirmación en los tribunales ordinarios del plan sistemático de exterminio que operó en nuestro territorio.\n\nSin embargo, el proceso de justicia permanece como una tarea abierta, con tramos fundamentales que aún aguardan el debate oral, en un contexto donde el paso de los años impone la carrera contra la impunidad biológica de los genocidas que fallecen antes de ser juzgados. Por sobre todo, persiste la herida más profunda: continuar la búsqueda de los restos de los compañeros y compañeras que continúan desaparecidos.\n\nLa memoria no es un punto de llegada ni un deber cumplido; es una manera de ver el presente y el futuro. No se sostiene por inercia: requiere de una convicción activa y cotidiana sobre la sociedad que queremos construir y para evitar que el horror vuelva a repetirse.",
       "tieneJuicio": false
     }
   ];
@@ -1199,6 +1465,10 @@
     cardYear: document.getElementById('cardYear'),
     cardTitle: document.getElementById('cardTitle'),
     cardText: document.getElementById('cardText'),
+    cardTextWrap: document.getElementById('cardTextWrap'),
+    textThumb: document.getElementById('textThumb'),
+    tlProgress: document.getElementById('tlProgressFill'),
+    tlBgImg: document.getElementById('tlBgImg'),
     cardCta: document.getElementById('cardCta'),
     btnPrev: document.getElementById('btnPrev'),
     btnNext: document.getElementById('btnNext'),
@@ -1217,8 +1487,19 @@
     ccdPopup: document.getElementById('ccdPopup'),
     popupClose: document.getElementById('popupClose'),
     popupMediaLabel: document.getElementById('popupMediaLabel'),
+    popupPhoto: document.getElementById('popupPhoto'),
+    cardPhoto: document.getElementById('cardPhoto'),
     popupTitle: document.getElementById('popupTitle'),
     popupAddress: document.getElementById('popupAddress'),
+    popupEyebrow: document.getElementById('popupEyebrow'),
+    victimsInfoBtn: document.getElementById('victimsInfoBtn'),
+    victimsTip: document.getElementById('victimsTip'),
+    mapInfoBtn: document.getElementById('mapInfoBtn'),
+    mapInfoTip: document.getElementById('mapInfoTip'),
+    convictStats: document.getElementById('convictStats'),
+    popupListWrap: document.getElementById('popupListWrap'),
+    popupList: document.getElementById('popupList'),
+    popupThumb: document.getElementById('popupThumb'),
     popupVictims: document.getElementById('popupVictims'),
 
     convictDrawer: document.getElementById('convictDrawer'),
@@ -1257,15 +1538,33 @@
   function getShuffledVictims(ccdId){
     if (!victimOrderCache[ccdId]){
       var rows = VICTIMAS.filter(function(v){ return v.ccd === ccdId; });
+      /* Un 10 % más de renglones que nunca se enfocan: las personas a las que
+         todavía no se llegó. No son nombres: son letras al azar, siempre borrosas. */
+      var extra = Math.ceil(rows.length * 0.10);
+      var rnd = seededRandom(hashStr(ccdId + '-pendientes'));
+      var letras = 'abcdefghilmnoprstuvz';
+      function palabra(){
+        var len = 4 + Math.floor(rnd() * 6), w = '';
+        for (var k = 0; k < len; k++) w += letras.charAt(Math.floor(rnd() * letras.length));
+        return w.charAt(0).toUpperCase() + w.slice(1);
+      }
+      for (var e = 0; e < extra; e++){
+        rows = rows.concat([{ nombre: palabra() + ' ' + palabra() + (rnd() > .5 ? ' ' + palabra() : ''),
+                              ccd: ccdId, juicio: null, pendiente: true }]);
+      }
       victimOrderCache[ccdId] = seededShuffle(rows, hashStr(ccdId));
     }
     return victimOrderCache[ccdId];
   }
 
   /* ------------------------------------------------------------------
-     SONIDO — placeholders sintetizados (sin archivos de audio todavía)
+     SONIDO — papel en las animaciones (archivos en assets/audio).
+     Se cargan al primer toque de la persona (los navegadores no dejan sonar antes).
   ------------------------------------------------------------------- */
   var audioCtx = null;
+  var SFX = {};
+  var sfxStarted = false;
+  var SFX_FILES = ['papel1', 'papel2', 'papel3', 'papel4', 'papel5', 'papel6'];
   function getAudioCtx(){
     var Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return null;
@@ -1273,66 +1572,41 @@
     if (audioCtx.state === 'suspended') audioCtx.resume();
     return audioCtx;
   }
-  function playTick(){
-    if (!state.soundOn) return;
+  function loadSfx(){
+    if (sfxStarted) return;
     var ctx = getAudioCtx(); if (!ctx) return;
-    var t = ctx.currentTime;
-    var osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1400, t);
-    osc.frequency.exponentialRampToValueAtTime(600, t + 0.04);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.14, t + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t); osc.stop(t + 0.06);
+    sfxStarted = true;
+    SFX_FILES.forEach(function(n){
+      try {
+        fetch('assets/audio/' + n + '.mp3')
+          .then(function(r){ return r.arrayBuffer(); })
+          .then(function(b){ return new Promise(function(ok, no){ ctx.decodeAudioData(b, ok, no); }); })
+          .then(function(buf){ SFX[n] = buf; })
+          .catch(function(){});
+      } catch (err) {}
+    });
   }
-  function playOpen(){
-    if (!state.soundOn) return;
+  ['pointerdown', 'keydown'].forEach(function(ev){ document.addEventListener(ev, loadSfx, { once: true }); });
+  setTimeout(loadSfx, 400);   /* se decodifican de antemano; suenan desde el primer toque */
+  function sfx(name, vol, delay, rate){
+    if (!state.soundOn || !SFX[name]) return;
     var ctx = getAudioCtx(); if (!ctx) return;
-    var t = ctx.currentTime;
-    var osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(220, t);
-    osc.frequency.exponentialRampToValueAtTime(520, t + 0.18);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.11, t + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t); osc.stop(t + 0.24);
+    var src = ctx.createBufferSource(), gain = ctx.createGain();
+    src.buffer = SFX[name];
+    if (rate) src.playbackRate.value = rate;
+    gain.gain.value = vol;
+    src.connect(gain); gain.connect(ctx.destination);
+    src.start(ctx.currentTime + (delay || 0));
+  }
+  function pick(list){ return list[Math.floor(Math.random() * list.length)]; }
+  function playOpen(kind){
+    sfx(kind === 'mapa' ? 'papel6' : pick(['papel2', 'papel5']), 0.5);
   }
   function playRewind(){
-    if (!state.soundOn) return;
-    var ctx = getAudioCtx(); if (!ctx) return;
-    var t = ctx.currentTime;
-    var osc = ctx.createOscillator(), gain = ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(480, t);
-    osc.frequency.exponentialRampToValueAtTime(140, t + 0.16);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.09, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t); osc.stop(t + 0.2);
+    sfx('papel1', 0.45, 0, 0.9);
   }
-  function playTypeKey(){
-    if (!state.soundOn) return;
-    var ctx = getAudioCtx(); if (!ctx) return;
-    var t = ctx.currentTime;
-    var size = Math.max(1, Math.floor(ctx.sampleRate * 0.018));
-    var buffer = ctx.createBuffer(1, size, ctx.sampleRate);
-    var data = buffer.getChannelData(0);
-    for (var i = 0; i < size; i++){ data[i] = (Math.random() * 2 - 1) * (1 - i / size); }
-    var noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    var filter = ctx.createBiquadFilter();
-    filter.type = 'highpass'; filter.frequency.value = 1800;
-    var gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.07, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.018);
-    noise.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-    noise.start(t); noise.stop(t + 0.02);
-  }
+  var quietNextCard = false;   /* el avance automático al volver del mapa no suma otro sonido */
+  function playCardPaper(){ if (quietNextCard){ quietNextCard = false; return; } sfx(pick(['papel1', 'papel3', 'papel4']), 0.5); }
 
   el.soundToggle.addEventListener('click', function(){
     state.soundOn = !state.soundOn;
@@ -1340,28 +1614,6 @@
     el.soundToggle.textContent = state.soundOn ? '♪' : '✕';
     if (state.soundOn) getAudioCtx();
   });
-
-  /* ------------------------------------------------------------------
-     SPLASH — animación tipo máquina de escribir
-  ------------------------------------------------------------------- */
-  function typeLine(elNode, text, delay, speed, cb){
-    elNode.textContent = '';
-    var i = 0;
-    setTimeout(function step(){
-      elNode.textContent = text.slice(0, i);
-      var cursor = document.createElement('span');
-      cursor.className = 'logo-cursor';
-      cursor.textContent = ' ';
-      elNode.appendChild(cursor);
-      if (i > 0) playTypeKey();
-      i++;
-      if (i <= text.length){
-        setTimeout(step, speed);
-      } else if (cb){
-        cb();
-      }
-    }, delay);
-  }
 
   /* Reproduce una vez el logo animado. Si el navegador no deja reproducir solo,
      o la persona pidió reducir el movimiento, muestra directamente el cuadro final. */
@@ -1419,6 +1671,10 @@
       target.classList.add('map-intro');
       clearTimeout(introTimer);
       introTimer = setTimeout(function(){ target.classList.remove('map-intro'); }, 1000);
+      if (!seenTip.map){   /* la primera vez que se entra al mapa, la ayuda aparece sola */
+        seenTip.map = true;
+        setTimeout(function(){ if (state.view === 'mapa') setTip(el.mapInfoTip, el.mapInfoBtn, true, true); }, 1300);
+      }
     }
     if (cb) cb();
     state.view = name;
@@ -1434,6 +1690,14 @@
     });
   }
 
+  var skipAsking = false;
+  /* Salto al cierre: se desbloquea todo el recorrido (quien salta elige verlo después). */
+  function jumpToEnd(){
+    skipAsking = false;
+    HITOS.forEach(function(x){ if (x.tieneJuicio) x.resuelto = true; });
+    state.maxReached = HITOS.length - 1;
+    changeHito(HITOS.length - 1);
+  }
   function setTopbar(view){
     if (view === 'splash'){
       el.topbar.classList.remove('is-visible');
@@ -1443,13 +1707,41 @@
     el.topbarSlot.innerHTML = '';
     if (view === 'timeline'){
       var counter = document.createElement('span');
+      counter.className = 'topbar-count';
       counter.textContent = pad(state.index + 1) + ' / ' + pad(HITOS.length);
       el.topbarSlot.appendChild(counter);
+      var last = HITOS.length - 1;
+      if (state.index < last){
+        var experienced = (state.maxReached || 0) >= Math.ceil(HITOS.length * 0.6);
+        if (skipAsking){
+          var ask = document.createElement('span');
+          ask.className = 'topbar-skip-confirm';
+          ask.innerHTML = '<span class="q">¿Saltar ' + (last - state.index) + ' hitos?</span>';
+          var yes = document.createElement('button'); yes.type = 'button'; yes.textContent = 'Sí, ir al final';
+          var no = document.createElement('button'); no.type = 'button'; no.textContent = 'No';
+          yes.addEventListener('click', jumpToEnd);
+          no.addEventListener('click', function(){ skipAsking = false; setTopbar('timeline'); });
+          ask.appendChild(yes); ask.appendChild(no);
+          el.topbarSlot.appendChild(ask);
+        } else {
+          var skip = document.createElement('button');
+          skip.type = 'button';
+          skip.className = 'topbar-skip' + (experienced ? ' is-ready' : '');
+          skip.textContent = 'Ir al final ›|';
+          skip.setAttribute('aria-label', 'Ir al final del recorrido');
+          skip.addEventListener('click', function(){
+            if (experienced) jumpToEnd();
+            else { skipAsking = true; setTopbar('timeline'); }
+          });
+          el.topbarSlot.appendChild(skip);
+        }
+      }
     } else if (view === 'mapa' || view === 'about'){
       var back = document.createElement('button');
       back.type = 'button';
       back.className = 'topbar-back';
-      back.textContent = view === 'mapa' ? '‹ Volver sin avanzar' : '‹ Volver';
+      back.innerHTML = view === 'mapa' ? (isFinalHito(HITOS[state.index]) ? '‹ Volver<span class="long"> al cierre</span>' : '‹ Volver<span class="long"> sin avanzar</span>') : '‹ Volver';
+      back.setAttribute('aria-label', view === 'mapa' ? (isFinalHito(HITOS[state.index]) ? 'Volver al cierre' : 'Volver a la línea de tiempo sin avanzar') : 'Volver a la portada');
       back.addEventListener('click', function(){
         playRewind();
         if (view === 'mapa') closeOverlays();
@@ -1463,6 +1755,7 @@
 
   el.btnStart.addEventListener('click', function(){
     playOpen();
+    warmPhotos();
     crossTo('timeline', renderTimeline, 'dive');
     requestAnimationFrame(positionTrack);
   });
@@ -1536,22 +1829,94 @@
     return out.join('');
   }
 
+  /* Riel de lectura: aparece solo si el texto es más largo que la tarjeta */
+  /* Las fotos de los sitios se bajan en segundo plano apenas empieza el recorrido,
+     así la ficha ya las tiene listas cuando se toca un pin. */
+  var photosWarm = false;
+  function warmPhotos(){
+    if (photosWarm) return;
+    photosWarm = true;
+    CCDS.forEach(function(c, i){
+      if (!c.imagen) return;
+      setTimeout(function(){ var im = new Image(); im.decoding = 'async'; im.src = c.imagen; }, i * 250);
+    });
+    warmHitoPhotos();
+  }
+  /* De los hitos se adelantan solo la foto actual y las dos siguientes (ahorra datos en el celular) */
+  var hitoWarm = {};
+  function warmHitoPhotos(){
+    for (var i = state.index; i <= state.index + 2 && i < HITOS.length; i++){
+      var src = HITOS[i].imagen;
+      if (!src || hitoWarm[src]) continue;
+      hitoWarm[src] = true;
+      var im = new Image(); im.decoding = 'async'; im.src = src;
+    }
+  }
+
+  /* Foto 16:9 si hay archivo cargado; si no (o si no carga) queda el marcador de "pendiente" */
+  /* Qué parte de cada foto se ve cuando la columna la recorta (x en %). Por defecto, el centro. */
+  var FOTO_FOCO = { h1:'50% 40%', h2:'45% 50%', h3:'68% 50%', h4:'50% 50%', h5:'50% 50%', h6:'45% 50%', h7:'40% 50%',
+                    h8:'50% 50%', h9:'50% 50%', h10:'55% 50%', h11:'66% 50%', h12:'68% 50%', h13:'30% 50%' };
+  var HITO_FINAL = 'h14';
+  function isFinalHito(h){ return !!h && h.id === HITO_FINAL; }
+  function setPhoto(img, label, src, alt, foco){
+    img.style.objectPosition = foco || '50% 50%';
+    if (!src){ img.hidden = true; img.removeAttribute('src'); label.hidden = false; return; }
+    img.onload = function(){ img.hidden = false; label.hidden = true; };
+    img.onerror = function(){ img.hidden = true; label.hidden = false; };
+    img.alt = alt || '';
+    if (img.getAttribute('src') === src && img.complete && img.naturalWidth){ img.hidden = false; label.hidden = true; }
+    else { img.hidden = true; label.hidden = false; img.src = src; }
+  }
+  function updateTextScroll(){
+    var t = el.cardText, w = el.cardTextWrap;
+    var over = t.scrollHeight > t.clientHeight + 4;
+    w.classList.toggle('is-scrollable', over);
+    t.classList.toggle('is-scrollable', over);
+    t.tabIndex = over ? 0 : -1;
+    var atEnd = !over || t.scrollTop + t.clientHeight >= t.scrollHeight - 4;
+    w.classList.toggle('is-end', atEnd);
+    t.classList.toggle('is-end', atEnd);
+    if (over){
+      var rail = w.querySelector('.text-rail');
+      var railH = rail.clientHeight;
+      var th = Math.max(28, railH * t.clientHeight / t.scrollHeight);
+      var maxTop = railH - th;
+      var ratio = t.scrollTop / (t.scrollHeight - t.clientHeight);
+      el.textThumb.style.height = th + 'px';
+      el.textThumb.style.top = (maxTop * ratio) + 'px';
+    }
+  }
+  el.cardText.addEventListener('scroll', updateTextScroll);
+
   function renderTimeline(){
     state.maxReached = Math.max(state.maxReached || 0, state.index);
+    if (photosWarm) warmHitoPhotos();
     var h = HITOS[state.index];
     var n = HITOS.length;
 
+    var finalHito = isFinalHito(h);
     el.card.classList.toggle('side-right', state.index % 2 === 1);
+    el.card.classList.toggle('no-photo', finalHito);
     el.cardYear.textContent = h.fecha || h.year;
     el.cardYear.classList.toggle('is-long', String(h.fecha || h.year).length > 6);
     el.cardTitle.textContent = h.title;
     el.cardText.innerHTML = formatText(h.text);
     el.cardText.scrollTop = 0;
-    el.cardText.classList.toggle('is-scrollable', el.cardText.scrollHeight > el.cardText.clientHeight + 4);
+    updateTextScroll();
     el.cardMediaLabel.textContent = 'Foto de archivo — pendiente (' + h.year + ')';
+    setPhoto(el.cardPhoto, el.cardMediaLabel, h.imagen, h.title, FOTO_FOCO[h.id]);
 
     var needsResolution = h.tieneJuicio && !h.resuelto;
-    el.cardCta.hidden = !h.tieneJuicio;  /* también en hitos ya vistos, para revisar un estado anterior del mapa */
+    el.tlProgress.style.width = ((state.index + 1) / n * 100) + '%';
+    /* el fondo recorre el mapa de punta a punta a lo largo del recorrido */
+    var t = state.index / Math.max(1, n - 1);
+    var bg = el.tlBgImg;
+    bg.style.setProperty('--bgx', ((0.5 - t) * 16).toFixed(2) + '%');
+    bg.style.setProperty('--bgy', ((t - 0.5) * 10).toFixed(2) + '%');
+    bg.style.setProperty('--bgz', (1 + t * 0.35).toFixed(3));
+    el.cardCta.textContent = finalHito ? 'Ver el mapa completo' : '¿Qué se reconstruyó?';
+    el.cardCta.hidden = !(h.tieneJuicio || finalHito);  /* también en hitos ya vistos, para revisar un estado anterior del mapa */
 
     var isFirst = state.index === 0;
     var isLast = state.index === n - 1;
@@ -1561,6 +1926,7 @@
 
     el.btnNext.hidden = isLast;
     el.btnNext.disabled = isLast || needsResolution;
+    el.btnNext.classList.toggle('is-waiting', needsResolution);
 
     if (state.view === 'timeline') setTopbar('timeline');  /* en la portada la barra queda oculta */
     renderTrack();
@@ -1570,10 +1936,11 @@
   var hitoTimer = null, autoAdvanceTimer = null;
   function changeHito(newIndex){
     if (newIndex === state.index || newIndex < 0 || newIndex >= HITOS.length) return;
+    skipAsking = false;
     clearTimeout(autoAdvanceTimer);
     clearTimeout(hitoTimer);
     var dir = newIndex > state.index ? 'next' : 'prev';
-    playTick();
+    playCardPaper();
     var card = el.card;
     card.classList.remove('card-in-next', 'card-in-prev', 'card-out-next', 'card-out-prev');
     void card.offsetWidth;
@@ -1595,12 +1962,28 @@
   }
   function goNext(){ if (!el.btnNext.disabled) changeHito(state.index + 1); }
   function goPrev(){ changeHito(state.index - 1); }
+  /* En pantallas táctiles: deslizar hacia los costados sobre la ficha cambia de hito */
+  (function(){
+    var stage = document.querySelector('.tl-stage'), sx = 0, sy = 0, st = 0, on = false;
+    if (!stage) return;
+    stage.addEventListener('touchstart', function(e){
+      if (e.touches.length !== 1){ on = false; return; }
+      on = true; sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+    }, { passive:true });
+    stage.addEventListener('touchend', function(e){
+      if (!on) return; on = false;
+      var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Date.now() - st > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      if (dx < 0){ if (!el.btnNext.hidden && !el.btnNext.disabled) goNext(); }
+      else if (!el.btnPrev.hidden && !el.btnPrev.disabled) goPrev();
+    }, { passive:true });
+  })();
   el.btnPrev.addEventListener('click', goPrev);
   el.btnNext.addEventListener('click', goNext);
   el.cardCta.addEventListener('click', openMapa);
 
   window.addEventListener('resize', function(){
-    if (state.view === 'timeline') positionTrack();
+    if (state.view === 'timeline'){ positionTrack(); updateTextScroll(); }
   });
 
   /* ------------------------------------------------------------------
@@ -1614,17 +1997,9 @@
     return ids;
   }
 
-  function accumulatedCcds(juicioIds){
-    var set = {};
-    juicioIds.forEach(function(jid){
-      (JUICIOS[jid].ccdsIluminados || []).forEach(function(cid){ set[cid] = true; });
-    });
-    return set;
-  }
-
   function openMapa(){
     clearTimeout(autoAdvanceTimer);
-    playOpen();
+    playOpen('mapa');
     closeOverlays();
     state.selectedCcd = null;
     crossTo('mapa', renderMapaScreen, 'dive');
@@ -1632,28 +2007,71 @@
 
   function renderMapaScreen(){
     var h = HITOS[state.index];
-    var juicio = JUICIOS[h.juicio];
-    el.mapJuicioNombre.textContent = juicio.nombre;
+    var finalHito = isFinalHito(h);
+    el.mapJuicioNombre.textContent = finalHito ? 'Mapa completo' : JUICIOS[h.juicio].nombre;
+    el.btnContinue.textContent = finalHito ? 'Volver al cierre' : '¿Cómo siguió?';
+    var eb = document.getElementById('mapEyebrow'); if (eb) eb.textContent = finalHito ? 'Zona 233' : '¿Qué se reconstruyó?';
+    var tip = document.getElementById('mapInfoTip');
+    if (tip) tip.innerHTML = finalHito
+      ? 'Cada pin es un lugar de la red represiva en Resistencia. Con todas las sentencias reunidas, <b>todos</b> están en rojo. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.'
+      : 'Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.';
     buildMapMarkers();
     updateCondenasBadge();
     var note = document.getElementById('mapProvisional');
     if (note) note.hidden = !!mapBgSrc;
   }
 
+  /* Encuadre: en pantallas anchas el mapa cubre todo (como antes). En pantallas angostas
+     (celular vertical, tablet vertical) se abre lo justo para que entren los 8 sitios;
+     el mapa queda en una franja central y arriba y abajo se funde con el fondo. */
+  var MAP_REQ = { x0:240, x1:1040 };
+  function computeMapView(){
+    var W = el.mapSvg.clientWidth || el.mapSvg.getBoundingClientRect().width;
+    var H = el.mapSvg.clientHeight || el.mapSvg.getBoundingClientRect().height;
+    if (!W || !H) return false;
+    var A = W / H, vw, vh;
+    if (A >= MAP_W / MAP_H){ vw = MAP_W; vh = MAP_W / A; } else { vh = MAP_H; vw = MAP_H * A; }
+    var reqW = MAP_REQ.x1 - MAP_REQ.x0;
+    if (vw < reqW){ vw = reqW; vh = vw / A; }
+    var vx = (MAP_REQ.x0 + MAP_REQ.x1) / 2 - vw / 2;
+    vx = Math.max(Math.min(vx, MAP_W - vw), Math.min(0, MAP_W - vw));
+    if (vw > MAP_W) vx = (MAP_W - vw) / 2;
+    /* si sobra alto, el mapa se corre un poco hacia arriba: abajo van los botones */
+    var vy = vh > MAP_H ? (MAP_H - vh) / 2 + (vh - MAP_H) * 0.06 : (MAP_H - vh) / 2;
+    var k = W / vw;
+    mapView = { x:vx, y:vy, w:vw, h:vh, k:k, letterbox: vh > MAP_H + 1,
+                pin: Math.max(PIN_SCALE, PIN_MIN_PX / (PIN_H_UNITS * k)) };
+    var vb = vx.toFixed(1) + ' ' + vy.toFixed(1) + ' ' + vw.toFixed(1) + ' ' + vh.toFixed(1);
+    el.mapSvg.setAttribute('viewBox', vb);
+    el.mapMarkersSvg.setAttribute('viewBox', vb);
+    return true;
+  }
+
   function buildMapMarkers(){
+    computeMapView();
     var juicioIds = accumulatedJuicioIds();
     /* Se iluminan solo los sitios donde la sentencia actual suma víctimas; los demás se apagan.
        Las nóminas, en cambio, conservan todos los nombres ya reconstruidos. */
     var curHito = HITOS[state.index];
     var litCcds = {};
-    if (curHito && curHito.juicio && JUICIOS[curHito.juicio]){
+    if (isFinalHito(curHito)){
+      CCDS.forEach(function(c){ litCcds[c.id] = true; });   /* cierre: todos los sitios en rojo */
+    } else if (curHito && curHito.juicio && JUICIOS[curHito.juicio]){
       (JUICIOS[curHito.juicio].ccdsIluminados || []).forEach(function(cid){ litCcds[cid] = true; });
     }
 
     var svgParts = [];
-    svgParts.push('<rect x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" fill="var(--bg-raised)"/>');
+    svgParts.push('<rect x="' + Math.min(0, mapView.x) + '" y="' + Math.min(0, mapView.y) + '" width="' + Math.max(MAP_W, mapView.w) + '" height="' + Math.max(MAP_H, mapView.h) + '" fill="var(--bg-raised)"/>');
     if (mapBgSrc){
       svgParts.push('<image class="map-bg-img" href="' + mapBgSrc + '" x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" preserveAspectRatio="none"/>');
+      if (mapView.letterbox){
+        svgParts.push(
+          '<defs><linearGradient id="fadeTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17140f"/><stop offset="1" stop-color="#17140f" stop-opacity="0"/></linearGradient>' +
+          '<linearGradient id="fadeBot" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#17140f"/><stop offset="1" stop-color="#17140f" stop-opacity="0"/></linearGradient></defs>' +
+          '<rect x="' + mapView.x + '" y="0" width="' + mapView.w + '" height="110" fill="url(#fadeTop)"/>' +
+          '<rect x="' + mapView.x + '" y="' + (MAP_H - 110) + '" width="' + mapView.w + '" height="110" fill="url(#fadeBot)"/>'
+        );
+      }
     } else {
       /* Respaldo si la imagen todavía no cargó o no se puede acceder */
       svgParts.push(
@@ -1686,7 +2104,7 @@
 
       markerParts.push(
         '<g class="map-marker" data-ccd="' + ccd.id + '" data-x="' + ccd.x + '" data-y="' + ccd.y + '" data-rot="' + pinAngle(ccd.id) + '" data-lit="' + lit + '" data-selected="' + selected + '" tabindex="0" role="button" aria-label="' + ccd.nombre + (lit ? ', con víctimas en esta causa' : '') + '">' +
-          '<circle class="hit" cx="' + ccd.x + '" cy="' + (ccd.y - 16) + '" r="19" fill="transparent"/>' +
+          '<circle class="hit" cx="' + ccd.x + '" cy="' + (ccd.y - 60 * mapView.pin) + '" r="' + Math.max(48 * mapView.pin, 22 / mapView.k).toFixed(1) + '" fill="transparent"/>' +
           '<g class="pin-body" transform="' + pinTransform(ccd.x, ccd.y, selected, pinAngle(ccd.id)) + '">' +
             '<path class="pin-shadow" transform="translate(3 4)" d="' + PIN_PATH + '" fill="#000" fill-opacity=".55" filter="url(#softShadow)"/>' +
             (lit ? '<circle class="pin-glow" cx="50" cy="42" r="36" fill="var(--accent-bright)" filter="url(#pinGlowBlur)"/>' : '') +
@@ -1761,10 +2179,10 @@
        mida lo mismo en cualquier monitor. */
     var r = { width: el.mapMarkersSvg.clientWidth, height: el.mapMarkersSvg.clientHeight };
     if (!r.width || !r.height) return;
-    var scale = Math.max(r.width / MAP_W, r.height / MAP_H);
+    var scale = mapView.k || Math.max(r.width / MAP_W, r.height / MAP_H);
     var u = function(px){ return px / scale; };
     var fontU = u(14), padX = u(11), padY = u(7), tickW = u(3), gap = u(8);
-    var pinH = PIN_H_UNITS * PIN_SCALE_SELECTED;
+    var pinH = PIN_H_UNITS * pinK(true);
 
     CCDS.forEach(function(ccd){
       var g = el.mapMarkersSvg.querySelector('.map-label[data-label="' + ccd.id + '"]');
@@ -1777,8 +2195,9 @@
       try { box = text.getBBox(); } catch (e) { return; }
       var w = box.width + padX * 2 + tickW;
       var h = box.height + padY * 2;
-      var left = Math.max(u(12), Math.min(MAP_W - w - u(12), ccd.x - w / 2));
-      var above = ccd.y - pinH - gap - h >= u(12);
+      var vx0 = mapView.x, vx1 = mapView.x + mapView.w;
+      var left = Math.max(vx0 + u(12), Math.min(vx1 - w - u(12), ccd.x - w / 2));
+      var above = ccd.y - pinH - gap - h >= mapView.y + u(70);
       var top = above ? ccd.y - pinH - gap - h : ccd.y + u(10);
       plate.setAttribute('x', left);
       plate.setAttribute('y', top);
@@ -1792,7 +2211,18 @@
       text.setAttribute('y', top + h / 2 + box.height * 0.3);
     });
   }
-  window.addEventListener('resize', function(){ if (state.view === 'mapa') layoutMapLabels(); });
+  var mapResizeTimer = null;
+  window.addEventListener('resize', function(){
+    if (state.view !== 'mapa') return;
+    clearTimeout(mapResizeTimer);
+    mapResizeTimer = setTimeout(function(){
+      buildMapMarkers();
+      if (state.selectedCcd) setSelectedMarker(state.selectedCcd);
+      if (el.ccdPopup.classList.contains('is-open')){ positionPopupNearMarker(); updatePopupScroll(); }
+      if (el.convictDrawer.classList.contains('is-open')) positionDrawerNearTrigger();
+      if (el.mapInfoTip.classList.contains('is-on')) placeTip(el.mapInfoTip, el.mapInfoBtn);
+    }, 120);
+  });
   if (document.fonts && document.fonts.ready){
     document.fonts.ready.then(function(){ if (state.view === 'mapa') layoutMapLabels(); });
   }
@@ -1832,13 +2262,20 @@
 
   function openPopup(ccdId, markerNode){
     playOpen();
+    setTip(el.mapInfoTip, el.mapInfoBtn, false);
     var ccd = CCDS.filter(function(c){ return c.id === ccdId; })[0];
     if (!ccd) return;
     var juicioIds = accumulatedJuicioIds();
 
     el.popupTitle.textContent = ccd.nombre;
     el.popupAddress.textContent = ccd.direccion;
+    var esHosp = ccd.tipo === 'hospital';
+    el.popupEyebrow.textContent = esHosp ? 'Centro de apoyo logístico' : 'Centro clandestino';
+    el.victimsTip.textContent = 'Víctimas del terrorismo de Estado y sobrevivientes que pasaron por este ' +
+      (esHosp ? 'centro de apoyo logístico' : 'centro clandestino de detención') +
+      '. Los nombres en foco son los reconocidos por las sentencias hasta esta etapa; los borrosos todavía no fueron alcanzados.';
     el.popupMediaLabel.textContent = 'Fotografía — pendiente';
+    setPhoto(el.popupPhoto, el.popupMediaLabel, ccd.imagen, 'Fachada actual: ' + ccd.nombre);
 
     el.popupVictims.innerHTML = '';
     var rows = getShuffledVictims(ccdId);
@@ -1850,8 +2287,9 @@
         sep.textContent = ' · ';
         el.popupVictims.appendChild(sep);
       }
-      var focused = v.juicio && juicioIds.indexOf(v.juicio) !== -1;
+      var focused = !v.pendiente && v.juicio && juicioIds.indexOf(v.juicio) !== -1;
       var span = document.createElement('span');
+      if (v.pendiente) span.setAttribute('aria-hidden', 'true');
       span.className = 'victim-name ' + (focused ? 'is-focused' : 'is-blurred');
       span.textContent = v.nombre;
       el.popupVictims.appendChild(span);
@@ -1859,10 +2297,73 @@
 
     el.convictDrawer.classList.remove('is-open');
     positionPopupNearMarker(markerNode);
+    el.popupList.scrollTop = 0;
+    updatePopupScroll();
+    setTip(el.victimsTip, el.victimsInfoBtn, false);
+    if (!seenTip.victims){   /* la primera vez se muestra sola; después, solo con el cursor */
+      seenTip.victims = true;
+      setTimeout(function(){ if (el.ccdPopup.classList.contains('is-open')) setTip(el.victimsTip, el.victimsInfoBtn, true, true); }, 450);
+    }
     el.overlayBackdrop.classList.add('is-open');
     el.ccdPopup.classList.add('is-open');
     if (usingKeyboard) setTimeout(function(){ el.popupClose.focus({ preventScroll:true }); }, 0);
   }
+
+  function updatePopupScroll(){
+    var t = el.popupList, w = el.popupListWrap;
+    var over = t.scrollHeight > t.clientHeight + 4;
+    var atEnd = !over || t.scrollTop + t.clientHeight >= t.scrollHeight - 4;
+    w.classList.toggle('is-scrollable', over);  t.classList.toggle('is-scrollable', over);
+    w.classList.toggle('is-end', atEnd);        t.classList.toggle('is-end', atEnd);
+    if (over){
+      var railH = w.querySelector('.text-rail').clientHeight;
+      var th = Math.max(28, railH * t.clientHeight / t.scrollHeight);
+      el.popupThumb.style.height = th + 'px';
+      el.popupThumb.style.top = ((railH - th) * t.scrollTop / (t.scrollHeight - t.clientHeight)) + 'px';
+    }
+  }
+  el.popupList.addEventListener('scroll', updatePopupScroll);
+
+  /* (i) con texto: aparece al pasar el cursor o enfocar; la primera vez se muestra sola unos segundos */
+  var seenTip = { victims:false, map:false };
+  var tipTimers = {};
+  function placeTip(tip, btn){
+    if (tip === el.mapInfoTip){
+      var mr = screens.mapa.getBoundingClientRect(), b2 = btn.getBoundingClientRect();
+      tip.style.left = Math.max(10, Math.min(b2.left - mr.left, mr.width - tip.offsetWidth - 10)) + 'px';
+      tip.style.top = (b2.bottom - mr.top + 10) + 'px';
+    }
+    if (tip === el.victimsTip){
+      var pr = el.ccdPopup.getBoundingClientRect(), br = btn.getBoundingClientRect();
+      var tw = tip.offsetWidth, left = br.left - pr.left;
+      left = Math.min(Math.max(10, left), pr.width - tw - 10);
+      tip.style.left = left + 'px';
+      var th = tip.offsetHeight, below = br.bottom - pr.top + 8;
+      /* si abajo no entra (ficha chica de los hospitales), se abre hacia arriba */
+      var scrolls = el.ccdPopup.scrollHeight > el.ccdPopup.clientHeight + 4;
+      if (scrolls) tip.style.top = (below + el.ccdPopup.scrollTop) + 'px';
+      else tip.style.top = ((below + th > pr.height - 8) ? Math.max(8, br.top - pr.top - th - 8) : below) + 'px';
+    }
+  }
+  function setTip(tip, btn, on, auto){
+    clearTimeout(tipTimers[tip.id]);
+    if (on) placeTip(tip, btn);
+    tip.classList.toggle('is-on', on);
+    btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    if (on && auto) tipTimers[tip.id] = setTimeout(function(){ setTip(tip, btn, false); }, 7000);
+  }
+  function wireTip(tip, btn){
+    btn.addEventListener('pointerenter', function(e){ if (e.pointerType === 'mouse') setTip(tip, btn, true); });
+    btn.addEventListener('pointerleave', function(e){ if (e.pointerType === 'mouse') setTip(tip, btn, false); });
+    btn.addEventListener('focus', function(){ if (usingKeyboard) setTip(tip, btn, true); });
+    btn.addEventListener('blur', function(){ setTip(tip, btn, false); });
+    btn.addEventListener('click', function(e){   /* en pantallas táctiles */
+      e.stopPropagation();
+      setTip(tip, btn, !tip.classList.contains('is-on'));
+    });
+  }
+  wireTip(el.victimsTip, el.victimsInfoBtn);
+  wireTip(el.mapInfoTip, el.mapInfoBtn);
 
   /* La ficha se abre siempre centrada en la pantalla del mapa, sin importar qué pin se eligió. */
   function positionPopupNearMarker(){
@@ -1871,11 +2372,9 @@
     var maxH = Math.max(240, containerRect.height - margin * 2);
     el.ccdPopup.style.maxHeight = maxH + 'px';
     /* la nómina usa todo el alto que deja la cabecera y se desliza solo si no entra */
-    var list = el.ccdPopup.querySelector('.popup-list');
-    if (list){
-      list.style.maxHeight = '';
-      list.style.maxHeight = Math.max(120, maxH - list.offsetTop - 2) + 'px';
-    }
+    var wrap = el.popupListWrap;
+    wrap.style.maxHeight = '';
+    wrap.style.maxHeight = Math.max(120, maxH - wrap.offsetTop - 2) + 'px';
     var popupW = el.ccdPopup.offsetWidth;
     var popupH = el.ccdPopup.offsetHeight;
     el.ccdPopup.style.left = Math.max(margin, (containerRect.width - popupW) / 2) + 'px';
@@ -1894,39 +2393,53 @@
     });
 
     el.convictList.innerHTML = '';
+    var causas = {}, personas = {};
+    relevant.forEach(function(c){ causas[c.juicio] = true; personas[c.condenado] = true; });
+    el.convictStats.innerHTML = '';
+    [[Object.keys(personas).length, 'Condenados'], [Object.keys(causas).length, 'Causas']].forEach(function(s){
+      var box = document.createElement('div'); box.className = 'convict-stat';
+      box.innerHTML = '<span class="num">' + s[0] + '</span><span class="lbl">' + s[1] + '</span>';
+      el.convictStats.appendChild(box);
+    });
     if (order.length === 0){
       var empty = document.createElement('p');
       empty.className = 'panel-hint';
-      empty.textContent = 'Todavía no hay condenas registradas en este tramo.';
+      empty.style.marginTop = '16px';
+      empty.textContent = 'Todavía no hay condenas en esta etapa.';
       el.convictList.appendChild(empty);
     } else {
       order.forEach(function(force){
         var group = document.createElement('div');
         group.className = 'convict-group';
+        var names = Object.keys(byForce[force]);
         var forceLabel = document.createElement('div');
         forceLabel.className = 'convict-force';
-        forceLabel.textContent = force;
+        forceLabel.innerHTML = '<span></span><span class="n">' + names.length + '</span>';
+        forceLabel.firstChild.textContent = force;
         group.appendChild(forceLabel);
 
-        Object.keys(byForce[force]).forEach(function(name){
+        names.forEach(function(name){
           var entry = document.createElement('div');
           entry.className = 'convict-entry';
+          var items = byForce[force][name];
           var nameEl = document.createElement('div');
           nameEl.className = 'convict-name';
           nameEl.textContent = name;
           entry.appendChild(nameEl);
-          var penasList = document.createElement('ul');
-          penasList.className = 'convict-penas';
-          byForce[force][name].forEach(function(item){
-            var li = document.createElement('li');
-            li.appendChild(document.createTextNode(item.pena));
-            var causa = document.createElement('span');
-            causa.className = 'pena-causa';
-            causa.textContent = ' · ' + (JUICIOS[item.juicio] ? JUICIOS[item.juicio].nombre : '');
-            li.appendChild(causa);
-            penasList.appendChild(li);
+          /* una fila por condena: la causa a la izquierda y la pena a la derecha, siempre alineadas */
+          items.forEach(function(it){
+            var row = document.createElement('div');
+            row.className = 'convict-row';
+            var c = document.createElement('div');
+            c.className = 'convict-causa';
+            c.textContent = JUICIOS[it.juicio] ? JUICIOS[it.juicio].nombre : '';
+            var t = document.createElement('span');
+            t.className = 'pena-tag';
+            t.textContent = it.pena;
+            row.appendChild(c);
+            row.appendChild(t);
+            entry.appendChild(row);
           });
-          entry.appendChild(penasList);
           group.appendChild(entry);
         });
         el.convictList.appendChild(group);
@@ -1944,6 +2457,7 @@
 
   function openDrawer(){
     playOpen();
+    setTip(el.mapInfoTip, el.mapInfoBtn, false);
     renderConvictDrawer();
     el.ccdPopup.classList.remove('is-open');
     positionDrawerNearTrigger();
@@ -1951,7 +2465,9 @@
     el.convictDrawer.classList.add('is-open');
   }
 
+  var sheetMQ = window.matchMedia ? window.matchMedia('(max-width:760px), (max-height:560px)') : null;
   function positionDrawerNearTrigger(){
+    if (sheetMQ && sheetMQ.matches){ el.convictDrawer.style.top = ''; el.convictDrawer.style.right = ''; return; }
     var containerRect = screens.mapa.getBoundingClientRect();
     var btnRect = el.btnCondenas.getBoundingClientRect();
     var top = btnRect.bottom - containerRect.top + 10;
@@ -1967,7 +2483,6 @@
     el.overlayBackdrop.classList.remove('is-open');
     state.selectedCcd = null;
     if (state.view === 'mapa') setSelectedMarker(null);
-    if (wasOpen) playTick();
     if (wasOpen && usingKeyboard && state.view === 'mapa' && lastPinId){
       var back = el.mapMarkersSvg.querySelector('.map-marker[data-ccd="' + lastPinId + '"]');
       if (back) back.focus({ preventScroll:true });
@@ -1998,7 +2513,7 @@
     if (state.index < HITOS.length - 1){
       var from = state.index;
       autoAdvanceTimer = setTimeout(function(){
-        if (state.view === 'timeline' && state.index === from) changeHito(from + 1);
+        if (state.view === 'timeline' && state.index === from){ quietNextCard = true; changeHito(from + 1); }
       }, 650);
     }
   });
@@ -2007,10 +2522,10 @@
      INICIO
   ------------------------------------------------------------------- */
   startSplashAnimation();
+  setTimeout(warmPhotos, 3000);   /* en la portada, mientras se lee, se adelantan las fotos */
   renderTimeline();
 
 })();
 </script>
 
-</body>
-</html>
+</body></html>
