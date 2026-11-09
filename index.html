@@ -1,8 +1,7 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
-<title>Zona 233</title>
+<title>Zona 233 · Desarrollo</title>
 <style>
   /* Capas: marco de legajo con barra superior fija + una grilla central donde
      cuatro vistas (splash, línea de tiempo, mapa, quiénes somos) se deslizan
@@ -368,13 +367,23 @@
   .text-rail{ position:absolute; top:2px; bottom:28px; right:4px; width:2px; background:var(--line-strong); opacity:0; transition:opacity .2s ease; pointer-events:none; }
   .text-thumb{ position:absolute; left:-1px; width:4px; background:var(--accent-bright); min-height:28px; }
   .card-text-wrap.is-scrollable .text-rail{ opacity:1; }
+  /* El riel se puede arrastrar (zona sensible más ancha que la línea) y "Seguí leyendo" baja un tramo */
+  .card-text-wrap.is-scrollable .text-rail,
+  .popup-list-wrap.is-scrollable .text-rail{ pointer-events:auto; cursor:grab; touch-action:none; }
+  .text-rail::before{ content:""; position:absolute; top:-4px; bottom:-4px; left:-10px; right:-10px; }
+  .text-thumb{ transition:width .15s ease, left .15s ease; }
+  .text-rail:hover .text-thumb, .is-dragging .text-thumb{ width:6px; left:-2px; }
+  .is-dragging .text-rail{ cursor:grabbing; }
+  .is-dragging{ user-select:none; }
   .text-more{
     position:absolute; left:0; bottom:0; opacity:0; pointer-events:none;
     font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text);
     transition:opacity .2s ease;
   }
   .text-more::after{ content:" ↓"; }
-  .card-text-wrap.is-scrollable:not(.is-end) .text-more{ opacity:1; }
+  .card-text-wrap.is-scrollable:not(.is-end) .text-more{ opacity:1; pointer-events:auto; cursor:pointer; }
+  .text-more{ background:none; border:none; padding:6px 0 0; }
+  .text-more:hover{ color:var(--paper); }
   .card-text p{ margin:0 0 20px; }
   .card-text ul{ list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:10px; }
   .card-text li{ position:relative; padding-left:20px; }
@@ -569,6 +578,58 @@
     padding:0 7px;
   }
 
+
+  /* --- Microdocumentales: contador, aviso, botón en la ficha y reproductor --- */
+  .map-testimonios{ flex-basis:100%; margin-top:2px; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); white-space:nowrap; }
+  .map-testimonios b{ color:var(--accent-text); font-weight:700; }
+  .vid-ring{ fill:none; stroke:var(--paper); stroke-width:2; transform-box:fill-box; transform-origin:center; animation: vidRing 1.8s ease-out infinite; pointer-events:none; }
+  @keyframes vidRing{ 0%{ transform:scale(.55); opacity:.95; } 100%{ transform:scale(1.9); opacity:0; } }
+  .vid-badge circle{ fill:var(--paper); stroke:#000; stroke-width:1.5; }
+  .vid-badge path{ fill:var(--bg); }
+  .vid-badge.is-seen circle{ fill:var(--bg-card); stroke:var(--ink-faint); }
+  .vid-badge.is-seen path{ fill:var(--ink-dim); }
+  .new-testimonio{
+    position:absolute; left:50%; bottom:calc(76px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,12px);
+    z-index:6; display:flex; align-items:center; gap:10px;
+    background:rgba(11,10,9,.92); border:1px solid var(--accent-bright); color:var(--ink);
+    padding:10px 16px; font-size:var(--fs-sm); width:max-content; max-width:min(92vw,460px);
+    opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease, transform .4s ease, visibility .4s;
+  }
+  .new-testimonio.is-on{ opacity:1; visibility:visible; transform:translate(-50%,0); }
+  .new-testimonio .dot{ width:9px; height:9px; border-radius:50%; background:var(--accent-bright); flex:0 0 auto; animation:dotPulse 1.4s ease-in-out infinite; }
+  @keyframes dotPulse{ 50%{ opacity:.35; } }
+  .popup-play{
+    position:absolute; inset:0; z-index:1; width:100%; border:0; cursor:pointer; color:var(--ink);
+    background:linear-gradient(to top, rgba(11,10,9,.72), rgba(11,10,9,.12) 60%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase;
+  }
+  .popup-play[hidden], .popup-lock[hidden]{ display:none; }
+  .popup-play .disc{ width:54px; height:54px; border-radius:50%; background:var(--accent-bright); display:flex; align-items:center; justify-content:center; transition:transform .15s ease; }
+  .popup-play .disc svg{ width:20px; height:20px; margin-left:3px; fill:var(--bg); }
+  .popup-play:hover .disc, .popup-play:focus-visible .disc{ transform:scale(1.08); }
+  .popup-play:focus-visible{ outline:2px solid var(--paper); outline-offset:-4px; }
+  .popup-lock{
+    position:absolute; left:0; right:0; bottom:0; z-index:1; padding:9px 12px;
+    background:rgba(11,10,9,.82); color:var(--ink-dim);
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase;
+  }
+  .video-layer{
+    position:fixed; inset:0; z-index:40; background:rgba(5,4,3,.94);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    padding:max(16px, env(safe-area-inset-top,0px)) 16px max(16px, env(safe-area-inset-bottom,0px));
+    opacity:0; visibility:hidden; transition:opacity .25s ease, visibility .25s ease;
+  }
+  .video-layer.is-open{ opacity:1; visibility:visible; }
+  .video-title{ font-family:var(--font-display); font-size:var(--fs-lg); color:var(--ink); text-align:center; }
+  .video-title small{ display:block; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); margin-bottom:4px; }
+  .video-layer video{ width:min(100%, 1100px); max-height:calc(100dvh - 130px); background:#000; display:block; }
+  .video-close{
+    position:absolute; top:max(10px, env(safe-area-inset-top,0px)); right:12px; width:44px; height:44px;
+    background:rgba(11,10,9,.6); border:1px solid var(--line-strong); color:var(--ink-dim); font-size:var(--fs-lg); line-height:1; cursor:pointer;
+  }
+  .video-close:hover{ color:var(--ink); }
+
   .map-footer{
     position:relative; z-index:2; margin-top:auto; pointer-events:none;
     flex:0 0 auto;
@@ -669,7 +730,7 @@
   .popup-list-wrap .text-rail{ top:16px; bottom:30px; right:12px; }
   .popup-list-wrap.is-scrollable .text-rail{ opacity:1; }
   .popup-list-wrap .text-more{ left:26px; bottom:8px; }
-  .popup-list-wrap.is-scrollable:not(.is-end) .text-more{ opacity:1; }
+  .popup-list-wrap.is-scrollable:not(.is-end) .text-more{ opacity:1; pointer-events:auto; cursor:pointer; }
   .ccd-popup.is-hospital .popup-head{ padding:18px 20px 14px; }
   .ccd-popup.is-hospital .popup-list{ padding:14px 30px 20px 20px; }
   .ccd-popup.is-hospital .popup-list-wrap .text-more{ left:20px; }
@@ -711,6 +772,10 @@
   .drawer-close:hover{ color:var(--ink); }
   /* Contadores: lo primero que se lee */
   .convict-stats{ flex:0 0 auto; display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--line); }
+  .convict-stats.is-single{ grid-template-columns:1fr; }
+  .drawer-titles{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .drawer-sub{ font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--accent-text); }
+  .convict-entry.is-inline{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
   .convict-stat{ padding:16px 28px 14px; }
   .convict-stat + .convict-stat{ border-left:1px solid var(--line); }
   .convict-stat .num{ display:block; font-family:var(--font-display); font-size:44px; line-height:1; color:var(--accent-text); font-variant-numeric:tabular-nums; }
@@ -1037,7 +1102,7 @@
             <div class="card-text-wrap" id="cardTextWrap">
               <div class="card-text" id="cardText" tabindex="-1" lang="es">Texto de prueba.</div>
               <div class="text-rail" aria-hidden="true"><div class="text-thumb" id="textThumb"></div></div>
-              <div class="text-more" aria-hidden="true">Seguí leyendo</div>
+              <button class="text-more" type="button" tabindex="-1" aria-hidden="true">Seguí leyendo</button>
             </div>
             <button class="card-cta" id="cardCta" type="button" hidden>¿Qué se reconstruyó?</button>
           </div>
@@ -1060,6 +1125,7 @@
         <span class="map-eyebrow" id="mapEyebrow">¿Qué se reconstruyó?</span>
         <span class="map-title" id="mapJuicioNombre">Nombre del juicio de prueba</span>
         <button class="info-btn map-info" id="mapInfoBtn" type="button" aria-label="Cómo leer este mapa" aria-describedby="mapInfoTip" aria-expanded="false">i</button>
+        <span class="map-testimonios" id="mapTestimonios" hidden></span>
       </div>
 
       <div class="map-stage">
@@ -1081,12 +1147,20 @@
 
       <div class="info-tip" id="mapInfoTip" role="tooltip">Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.</div>
 
+      <div class="new-testimonio" id="newTestimonio" role="status" aria-live="polite"><span class="dot"></span><span>Nuevo testimonio disponible. Buscá el pin que late.</span></div>
+
       <!-- overlays -->
       <div class="overlay-backdrop" id="overlayBackdrop"></div>
 
+      <div class="video-layer" id="videoLayer" role="dialog" aria-modal="true" aria-label="Testimonio">
+        <button class="video-close" id="videoClose" type="button" aria-label="Cerrar video">×</button>
+        <div class="video-title" id="videoTitle"></div>
+        <video id="videoEl" controls playsinline preload="none"></video>
+      </div>
+
       <div class="ccd-popup" id="ccdPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
         <button class="popup-close" id="popupClose" type="button" aria-label="Cerrar">×</button>
-        <div class="popup-media"><img class="site-photo" id="popupPhoto" alt="" decoding="async" hidden><div class="popup-media-label" id="popupMediaLabel">Fotografía del sitio — pendiente</div></div>
+        <div class="popup-media"><img class="site-photo" id="popupPhoto" alt="" decoding="async" hidden><div class="popup-media-label" id="popupMediaLabel">Fotografía del sitio — pendiente</div><button class="popup-play" id="popupPlay" type="button" hidden><span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5v19l16-9.5z"/></svg></span><span id="popupPlayLabel">Ver testimonio</span></button><div class="popup-lock" id="popupLock" hidden>Testimonio · se habilita más adelante</div></div>
         <div class="popup-head">
           <div class="popup-eyebrow" id="popupEyebrow">Centro clandestino</div>
           <h3 class="popup-title" id="popupTitle">Nombre del sitio</h3>
@@ -1101,14 +1175,14 @@
           <div class="victim-flow" id="popupVictims"></div>
         </div>
         <div class="text-rail" aria-hidden="true"><div class="text-thumb" id="popupThumb"></div></div>
-        <div class="text-more" aria-hidden="true">Seguí leyendo</div>
+        <button class="text-more" type="button" tabindex="-1" aria-hidden="true">Seguí leyendo</button>
         </div>
         <div class="info-tip" id="victimsTip" role="tooltip"></div>
       </div>
 
       <div class="convict-drawer" id="convictDrawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
         <div class="drawer-head">
-          <span id="drawerTitle">Condenas</span>
+          <div class="drawer-titles"><span id="drawerTitle">Condenas</span><span class="drawer-sub" id="drawerSub"></span></div>
           <button class="drawer-close" id="drawerClose" type="button" aria-label="Cerrar">×</button>
         </div>
         <div class="convict-stats" id="convictStats"></div>
@@ -1277,6 +1351,8 @@
 
   var CONDENAS = [{"juicio": "j1", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Humberto Lucio Caballero", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Ramón Esteban Meza", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Rubén Héctor Roldán", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Francisco Orlando Álvarez", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Oscar Alberto Galarza", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Ramón Andrés Gandola", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j1", "condenado": "Enzo Breard", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j1", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "25 años de prisión"}, {"juicio": "j1", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "25 años de prisión"}, {"juicio": "j2", "condenado": "Athos Gustavo Renés", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Jorge Daniel Rafael Carnero Sabol", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Horacio Losito", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Aldo Héctor Martínez Segón", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Ricardo Guillermo Reyes", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Ernesto Jorge Simoni", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j2", "condenado": "Germán Emilio Riquelme", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j3", "condenado": "Norberto Raúl Tozzo", "fuerza": "Ejército Argentino", "pena": "24 años de prisión"}, {"juicio": "j4", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "19 años de prisión"}, {"juicio": "j4", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j4", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j4", "condenado": "Albino Luis Borda", "fuerza": "Policía de la Provincia del Chaco", "pena": "22 años de prisión"}, {"juicio": "j4", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "20 años de prisión"}, {"juicio": "j4", "condenado": "Ramón Esteban Meza", "fuerza": "Policía de la Provincia del Chaco", "pena": "19 años de prisión"}, {"juicio": "j4", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j4", "condenado": "Enzo Breard", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j4", "condenado": "Ángel Jorge Ibarra", "fuerza": "Policía de la Provincia del Chaco", "pena": "12 años de prisión"}, {"juicio": "j4", "condenado": "Antonio Musa Azar", "fuerza": "Policía de la Provincia de Santiago del Estero", "pena": "10 años de prisión"}, {"juicio": "j4", "condenado": "Miguel Tomás Garbi", "fuerza": "Policía de la Provincia de Santiago del Estero", "pena": "10 años de prisión"}, {"juicio": "j5", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "Prisión perpetua"}, {"juicio": "j5", "condenado": "Alcides Roberto Safenraiter", "fuerza": "Policía de la Provincia del Chaco", "pena": "Prisión perpetua"}, {"juicio": "j5", "condenado": "Eduardo Wischnivetzki", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j5", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "4 años de prisión"}, {"juicio": "j6", "condenado": "Roberto Domingo Mazzoni", "fuerza": "Poder Judicial de la Nación (Justicia Federal)", "pena": "11 años de prisión"}, {"juicio": "j6", "condenado": "César Pablo Casco", "fuerza": "Servicio Penitenciario Federal (SPF)", "pena": "11 años de prisión"}, {"juicio": "j7", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "11 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "José Tadeo Luis Bettolli", "fuerza": "Ejército Argentino", "pena": "7 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j7", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "25 años de prisión"}, {"juicio": "j7", "condenado": "Francisco Orlando Álvarez", "fuerza": "Policía de la Provincia del Chaco", "pena": "14 años de prisión"}, {"juicio": "j7", "condenado": "Ángel Jorge Ibarra", "fuerza": "Policía de la Provincia del Chaco", "pena": "6 años de prisión"}, {"juicio": "j7", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "3 años y 6 meses de prisión"}, {"juicio": "j7", "condenado": "César Pablo Casco", "fuerza": "Servicio Penitenciario Federal (SPF)", "pena": "3 años y 9 meses de prisión"}, {"juicio": "j8", "condenado": "Alfredo Luis Chas", "fuerza": "Policía de la Provincia del Chaco", "pena": "15 años de prisión"}, {"juicio": "j9", "condenado": "Aldo Héctor Martínez Segón", "fuerza": "Ejército Argentino", "pena": "14 años de prisión"}, {"juicio": "j9", "condenado": "Ricardo Guillermo Reyes", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Luis Alberto Patetta", "fuerza": "Ejército Argentino", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Ernesto Jorge Simoni", "fuerza": "Ejército Argentino", "pena": "10 años de prisión"}, {"juicio": "j9", "condenado": "Carlos Domingo Mora", "fuerza": "Policía de la Provincia del Chaco", "pena": "18 años de prisión"}, {"juicio": "j9", "condenado": "Gabino Manader", "fuerza": "Policía de la Provincia del Chaco", "pena": "14 años de prisión"}, {"juicio": "j9", "condenado": "José Francisco Rodríguez Valiente", "fuerza": "Policía de la Provincia del Chaco", "pena": "12 años de prisión"}, {"juicio": "j9", "condenado": "Miguel Ángel Vitorello", "fuerza": "Policía de la Provincia del Chaco", "pena": "10 años de prisión"}, {"juicio": "j9", "condenado": "José Marín", "fuerza": "Policía de la Provincia del Chaco", "pena": "9 años de prisión"}, {"juicio": "j10", "condenado": "Roberto Domingo Mazzoni", "fuerza": "Poder Judicial de la Nación (Justicia Federal)", "pena": "5 años y 6 meses de prisión"}];
 
+  /* Microdocumentales: cada sitio se habilita con una causa. El video vive en assets/video/sitios/<id>.mp4 */
+  var TESTIMONIOS = {ccd8:'j1', ccd1:'j4', ccd7:'j5', ccd5:'j6', ccd6:'j7', ccd4:'j9', ccd2:'j10', ccd3:'j11'};
   var JUICIOS = {"j1": {"nombre": "Causa Caballero I", "ccdsIluminados": ["ccd1", "ccd5", "ccd6", "ccd7", "ccd8"]}, "j2": {"nombre": "Causa Masacre de Margarita Belén I", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6"]}, "j3": {"nombre": "Causa Masacre de Margarita Belén II", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j4": {"nombre": "Causa Caballero II", "ccdsIluminados": ["ccd1", "ccd3", "ccd6", "ccd8"]}, "j5": {"nombre": "Causa Ligas Agrarias", "ccdsIluminados": ["ccd6", "ccd7"]}, "j6": {"nombre": "Causa Complicidad Judicial I", "ccdsIluminados": ["ccd1", "ccd3", "ccd4", "ccd5", "ccd6"]}, "j7": {"nombre": "Causa Caballero III", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6", "ccd2"]}, "j8": {"nombre": "Causa Masacre de Margarita Belén III", "ccdsIluminados": ["ccd1", "ccd5", "ccd6"]}, "j9": {"nombre": "Causa Conscriptos", "ccdsIluminados": ["ccd1", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j10": {"nombre": "Causa Complicidad Judicial II", "ccdsIluminados": ["ccd2", "ccd4", "ccd5", "ccd6", "ccd7"]}, "j11": {"nombre": "Causa por el Derecho a la Verdad", "ccdsIluminados": ["ccd1", "ccd3", "ccd5", "ccd6"]}};
 
   var HITOS = [
@@ -1588,8 +1664,9 @@
   }
   ['pointerdown', 'keydown'].forEach(function(ev){ document.addEventListener(ev, loadSfx, { once: true }); });
   setTimeout(loadSfx, 400);   /* se decodifican de antemano; suenan desde el primer toque */
+  var videoIsOpen = false;
   function sfx(name, vol, delay, rate){
-    if (!state.soundOn || !SFX[name]) return;
+    if (!state.soundOn || !SFX[name] || videoIsOpen) return;
     var ctx = getAudioCtx(); if (!ctx) return;
     var src = ctx.createBufferSource(), gain = ctx.createGain();
     src.buffer = SFX[name];
@@ -1889,6 +1966,38 @@
   }
   el.cardText.addEventListener('scroll', updateTextScroll);
 
+  /* Desplazamiento del texto: "Seguí leyendo" baja un tramo y el riel rojo se arrastra con el mouse o el dedo */
+  function wireScroller(sc, wrap, thumb){
+    var rail = wrap.querySelector('.text-rail'), more = wrap.querySelector('.text-more'), drag = null;
+    more.addEventListener('click', function(e){
+      e.stopPropagation();
+      sc.scrollBy({ top: Math.max(80, sc.clientHeight * 0.8), behavior:'smooth' });
+    });
+    rail.addEventListener('pointerdown', function(e){
+      if (!wrap.classList.contains('is-scrollable')) return;
+      e.preventDefault(); e.stopPropagation();
+      var r = rail.getBoundingClientRect(), tr = thumb.getBoundingClientRect();
+      var range = r.height - tr.height, max = sc.scrollHeight - sc.clientHeight;
+      if (range <= 0 || max <= 0) return;
+      if (e.clientY < tr.top || e.clientY > tr.bottom){   /* clic fuera del tirador: salta hasta ahí */
+        var top = Math.min(Math.max(e.clientY - r.top - tr.height / 2, 0), range);
+        sc.scrollTop = top / range * max;
+      }
+      drag = { y:e.clientY, st:sc.scrollTop, k:max / range };
+      try { rail.setPointerCapture(e.pointerId); } catch (err) {}
+      wrap.classList.add('is-dragging');
+    });
+    rail.addEventListener('pointermove', function(e){
+      if (!drag) return;
+      sc.scrollTop = drag.st + (e.clientY - drag.y) * drag.k;
+    });
+    function end(){ if (!drag) return; drag = null; wrap.classList.remove('is-dragging'); }
+    rail.addEventListener('pointerup', end);
+    rail.addEventListener('pointercancel', end);
+    rail.addEventListener('click', function(e){ e.stopPropagation(); });
+  }
+  wireScroller(el.cardText, el.cardTextWrap, el.textThumb);
+
   function renderTimeline(){
     state.maxReached = Math.max(state.maxReached || 0, state.index);
     if (photosWarm) warmHitoPhotos();
@@ -1997,6 +2106,38 @@
     return ids;
   }
 
+  var watched = {};
+  function testimonioUnlocked(ccdId){
+    var j = TESTIMONIOS[ccdId]; if (!j) return false;
+    if (isFinalHito(HITOS[state.index])) return true;
+    return accumulatedJuicioIds().indexOf(j) !== -1;
+  }
+  function testimonioIsNew(ccdId){
+    var h = HITOS[state.index];
+    return !isFinalHito(h) && !!h.tieneJuicio && TESTIMONIOS[ccdId] === h.juicio && !watched[ccdId];
+  }
+  function updateTestimonioCounter(){
+    var n = 0, tot = 0;
+    for (var id in TESTIMONIOS){ tot++; if (testimonioUnlocked(id)) n++; }
+    var c = document.getElementById('mapTestimonios');
+    if (!c) return;
+    c.hidden = false;
+    c.innerHTML = 'Testimonios <b>' + n + ' / ' + tot + '</b>';
+  }
+  var newNoticeTimer = null;
+  function showNewTestimonioNotice(){
+    var n = document.getElementById('newTestimonio');
+    clearTimeout(newNoticeTimer);
+    var any = false;
+    for (var id in TESTIMONIOS) if (testimonioIsNew(id)) any = true;
+    if (!n) return;
+    if (!any){ n.classList.remove('is-on'); return; }
+    newNoticeTimer = setTimeout(function(){
+      n.classList.add('is-on');
+      newNoticeTimer = setTimeout(function(){ n.classList.remove('is-on'); }, 9000);
+    }, 1500);
+  }
+
   function openMapa(){
     clearTimeout(autoAdvanceTimer);
     playOpen('mapa');
@@ -2017,6 +2158,8 @@
       : 'Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.';
     buildMapMarkers();
     updateCondenasBadge();
+    updateTestimonioCounter();
+    showNewTestimonioNotice();
     var note = document.getElementById('mapProvisional');
     if (note) note.hidden = !!mapBgSrc;
   }
@@ -2045,6 +2188,18 @@
     el.mapSvg.setAttribute('viewBox', vb);
     el.mapMarkersSvg.setAttribute('viewBox', vb);
     return true;
+  }
+
+  /* Insignia de testimonio disponible: disco con triángulo junto a la cabeza del pin; si es nuevo, un anillo que late */
+  function vidBadge(ccd){
+    var k = mapView.k, pinH = PIN_H_UNITS * pinK(false), r = 10 / k;
+    var cx = ccd.x + 15 / k, cy = ccd.y - pinH - 2 / k;
+    var seen = !!watched[ccd.id];
+    var tri = 'M' + (cx - r*0.28).toFixed(1) + ' ' + (cy - r*0.5).toFixed(1) + 'L' + (cx + r*0.55).toFixed(1) + ' ' + cy.toFixed(1) + 'L' + (cx - r*0.28).toFixed(1) + ' ' + (cy + r*0.5).toFixed(1) + 'Z';
+    return '<g class="vid-badge' + (seen ? ' is-seen' : '') + '" pointer-events="none">' +
+      (testimonioIsNew(ccd.id) ? '<circle class="vid-ring" cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r.toFixed(1) + '" fill="none"/>' : '') +
+      '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) + '" r="' + r.toFixed(1) + '"/>' +
+      '<path d="' + tri + '"/></g>';
   }
 
   function buildMapMarkers(){
@@ -2110,6 +2265,7 @@
             (lit ? '<circle class="pin-glow" cx="50" cy="42" r="36" fill="var(--accent-bright)" filter="url(#pinGlowBlur)"/>' : '') +
             '<path class="pin-path" d="' + PIN_PATH + '" fill="' + fill + '" stroke="' + ringStroke + '" stroke-width="' + ringWidth + '" stroke-linejoin="round"/>' +
           '</g>' +
+        (testimonioUnlocked(ccd.id) ? vidBadge(ccd) : '') +
         '</g>'
       );
     });
@@ -2277,6 +2433,12 @@
     el.popupMediaLabel.textContent = 'Fotografía — pendiente';
     setPhoto(el.popupPhoto, el.popupMediaLabel, ccd.imagen, 'Fachada actual: ' + ccd.nombre);
 
+    var hasVid = !!TESTIMONIOS[ccdId], unlocked = hasVid && testimonioUnlocked(ccdId);
+    var pl = document.getElementById('popupPlay'), lk = document.getElementById('popupLock');
+    pl.hidden = !unlocked;  lk.hidden = !(hasVid && !unlocked);
+    pl.setAttribute('data-ccd', ccdId);
+    document.getElementById('popupPlayLabel').textContent = watched[ccdId] ? 'Ver de nuevo' : 'Ver testimonio';
+
     el.popupVictims.innerHTML = '';
     var rows = getShuffledVictims(ccdId);
     el.ccdPopup.classList.toggle('is-hospital', ccd.tipo === 'hospital');
@@ -2323,10 +2485,12 @@
     }
   }
   el.popupList.addEventListener('scroll', updatePopupScroll);
+  wireScroller(el.popupList, el.popupListWrap, el.popupThumb);
 
   /* (i) con texto: aparece al pasar el cursor o enfocar; la primera vez se muestra sola unos segundos */
   var seenTip = { victims:false, map:false };
   var tipTimers = {};
+  var TIP_FIRST_MS = 16000;   /* la primera vez, la ayuda queda a la vista 16 segundos (antes 7) */
   function placeTip(tip, btn){
     if (tip === el.mapInfoTip){
       var mr = screens.mapa.getBoundingClientRect(), b2 = btn.getBoundingClientRect();
@@ -2350,7 +2514,7 @@
     if (on) placeTip(tip, btn);
     tip.classList.toggle('is-on', on);
     btn.setAttribute('aria-expanded', on ? 'true' : 'false');
-    if (on && auto) tipTimers[tip.id] = setTimeout(function(){ setTip(tip, btn, false); }, 7000);
+    if (on && auto) tipTimers[tip.id] = setTimeout(function(){ setTip(tip, btn, false); }, TIP_FIRST_MS);
   }
   function wireTip(tip, btn){
     btn.addEventListener('pointerenter', function(e){ if (e.pointerType === 'mouse') setTip(tip, btn, true); });
@@ -2381,9 +2545,20 @@
     el.ccdPopup.style.top = Math.max(margin, (containerRect.height - popupH) / 2) + 'px';
   }
 
+  /* Qué causas cuenta el panel de condenas: la del hito que se está viendo;
+     en el cierre ("Ver el mapa completo"), todas las recorridas. */
+  function drawerJuicioIds(){
+    var h = HITOS[state.index];
+    if (isFinalHito(h)) return accumulatedJuicioIds();
+    return h && h.juicio ? [h.juicio] : [];
+  }
   function renderConvictDrawer(){
-    var juicioIds = accumulatedJuicioIds();
+    var finalHito = isFinalHito(HITOS[state.index]);
+    var juicioIds = drawerJuicioIds();
+    var single = !finalHito;
     var relevant = CONDENAS.filter(function(c){ return juicioIds.indexOf(c.juicio) !== -1; });
+    var sub = document.getElementById('drawerSub');
+    if (sub) sub.textContent = finalHito ? 'Todas las causas' : (JUICIOS[juicioIds[0]] ? JUICIOS[juicioIds[0]].nombre : '');
     var byForce = {};
     var order = [];
     relevant.forEach(function(c){
@@ -2396,7 +2571,10 @@
     var causas = {}, personas = {};
     relevant.forEach(function(c){ causas[c.juicio] = true; personas[c.condenado] = true; });
     el.convictStats.innerHTML = '';
-    [[Object.keys(personas).length, 'Condenados'], [Object.keys(causas).length, 'Causas']].forEach(function(s){
+    el.convictStats.classList.toggle('is-single', single);
+    var stats = single ? [[Object.keys(personas).length, 'Condenados en esta causa']]
+                       : [[Object.keys(personas).length, 'Condenados'], [Object.keys(causas).length, 'Causas']];
+    stats.forEach(function(s){
       var box = document.createElement('div'); box.className = 'convict-stat';
       box.innerHTML = '<span class="num">' + s[0] + '</span><span class="lbl">' + s[1] + '</span>';
       el.convictStats.appendChild(box);
@@ -2405,7 +2583,7 @@
       var empty = document.createElement('p');
       empty.className = 'panel-hint';
       empty.style.marginTop = '16px';
-      empty.textContent = 'Todavía no hay condenas en esta etapa.';
+      empty.textContent = single ? 'Esta causa no tiene condenas cargadas.' : 'Todavía no hay condenas en esta etapa.';
       el.convictList.appendChild(empty);
     } else {
       order.forEach(function(force){
@@ -2426,6 +2604,16 @@
           nameEl.className = 'convict-name';
           nameEl.textContent = name;
           entry.appendChild(nameEl);
+          /* una sola causa: nombre a la izquierda y pena a la derecha, en la misma fila */
+          if (single && items.length === 1){
+            entry.classList.add('is-inline');
+            var tag = document.createElement('span');
+            tag.className = 'pena-tag';
+            tag.textContent = items[0].pena;
+            entry.appendChild(tag);
+            group.appendChild(entry);
+            return;
+          }
           /* una fila por condena: la causa a la izquierda y la pena a la derecha, siempre alineadas */
           items.forEach(function(it){
             var row = document.createElement('div');
@@ -2448,7 +2636,7 @@
   }
 
   function updateCondenasBadge(){
-    var juicioIds = accumulatedJuicioIds();
+    var juicioIds = drawerJuicioIds();
     var relevant = CONDENAS.filter(function(c){ return juicioIds.indexOf(c.juicio) !== -1; });
     var unique = {};
     relevant.forEach(function(c){ unique[c.condenado] = true; });
@@ -2476,6 +2664,36 @@
     el.convictDrawer.style.right = Math.max(right, 10) + 'px';
   }
 
+  /* Reproductor de testimonios: tapa todo, apaga los sonidos de papel y pausa al cerrar */
+  var videoLayer = document.getElementById('videoLayer'), videoEl = document.getElementById('videoEl');
+  function openVideo(ccdId){
+    var ccd = CCDS.filter(function(c){ return c.id === ccdId; })[0];
+    if (!ccd) return;
+    document.getElementById('videoTitle').innerHTML = '<small>Testimonio</small>' + ccd.nombre;
+    videoEl.poster = ccd.imagen || '';
+    videoEl.src = 'assets/video/sitios/' + ccdId + '.mp4';
+    videoIsOpen = true;
+    videoLayer.classList.add('is-open');
+    videoEl.play().catch(function(){});
+    watched[ccdId] = true;
+    videoLayer.setAttribute('data-ccd', ccdId);
+    document.getElementById('videoClose').focus({ preventScroll:true });
+  }
+  function closeVideo(){
+    if (!videoLayer.classList.contains('is-open')) return false;
+    videoEl.pause();
+    videoEl.removeAttribute('src'); videoEl.load();
+    videoLayer.classList.remove('is-open');
+    setTimeout(function(){ videoIsOpen = false; }, 300);
+    var id = videoLayer.getAttribute('data-ccd');
+    var label = document.getElementById('popupPlayLabel'); if (label) label.textContent = 'Ver de nuevo';
+    if (state.view === 'mapa'){ buildMapMarkers(); if (state.selectedCcd) setSelectedMarker(state.selectedCcd); }
+    return true;
+  }
+  document.getElementById('popupPlay').addEventListener('click', function(){ openVideo(this.getAttribute('data-ccd')); });
+  document.getElementById('videoClose').addEventListener('click', closeVideo);
+  videoLayer.addEventListener('click', function(e){ if (e.target === videoLayer) closeVideo(); });
+
   function closeOverlays(){
     var wasOpen = el.ccdPopup.classList.contains('is-open') || el.convictDrawer.classList.contains('is-open');
     el.ccdPopup.classList.remove('is-open');
@@ -2493,8 +2711,30 @@
   el.popupClose.addEventListener('click', closeOverlays);
   el.drawerClose.addEventListener('click', closeOverlays);
   el.overlayBackdrop.addEventListener('click', closeOverlays);
+  function activeScroller(){
+    if (el.convictDrawer.classList.contains('is-open')) return el.convictList;
+    if (el.ccdPopup.classList.contains('is-open'))
+      return el.popupList.scrollHeight > el.popupList.clientHeight + 4 ? el.popupList : el.ccdPopup;
+    if (state.view === 'timeline') return el.cardText;
+    if (state.view === 'about') return document.querySelector('.about-scroll');
+    return null;
+  }
+  var SCROLL_KEYS = { ArrowDown:1, ArrowUp:-1, PageDown:2, PageUp:-2, ' ':2, Home:-9, End:9 };
   document.addEventListener('keydown', function(e){
-    if (e.key === 'Escape') closeOverlays();
+    if (videoIsOpen || !(e.key in SCROLL_KEYS) || e.altKey || e.ctrlKey || e.metaKey) return;
+    var sc = activeScroller();
+    if (!sc || sc.scrollHeight <= sc.clientHeight + 4) return;
+    var tg = e.target;
+    if (tg && (sc === tg || sc.contains(tg))) return;              /* el propio texto ya responde solo */
+    if (e.key === ' ' && tg && /^(BUTTON|A|INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)) return;
+    if (tg && /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName)) return;
+    e.preventDefault();
+    var v = SCROLL_KEYS[e.key] * (e.shiftKey && e.key === ' ' ? -1 : 1);
+    if (Math.abs(v) === 9) sc.scrollTo({ top: v > 0 ? sc.scrollHeight : 0, behavior:'smooth' });
+    else sc.scrollBy({ top: Math.abs(v) === 2 ? Math.sign(v) * sc.clientHeight * 0.85 : v * 70, behavior:'smooth' });
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){ if (!closeVideo()) closeOverlays(); }
     if (state.view === 'timeline'){
       if (e.key === 'ArrowRight' && !el.btnNext.hidden && !el.btnNext.disabled) goNext();
       if (e.key === 'ArrowLeft' && !el.btnPrev.hidden && !el.btnPrev.disabled) goPrev();
@@ -2527,5 +2767,3 @@
 
 })();
 </script>
-
-</body></html>
