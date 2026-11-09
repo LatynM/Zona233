@@ -920,6 +920,12 @@
     .card.no-photo .card-body{ padding:20px 20px; }
     .card-year-stamp{ font-size:var(--fs-lg); padding:7px 11px 5px; }
     .card-year-stamp.is-long{ font-size:15px; }
+    /* el sello de la fecha va sobre la foto (esquina superior izquierda) y libera ese renglón para el texto */
+    .card:not(.no-photo){ position:relative; }
+    .card:not(.no-photo) .card-year-stamp{
+      position:absolute; left:14px; top:22px; z-index:3;
+      background:rgba(11,10,9,.80); box-shadow:0 2px 10px rgba(0,0,0,.45);
+    }
     .card-title{ font-size:22px; }
     .card-text{ font-size:17px; line-height:1.6; padding-right:16px; }
     .card-text p{ margin-bottom:16px; }
