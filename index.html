@@ -395,7 +395,7 @@
   .card-stats[hidden]{ display:none; }
   .card-stats div{ padding:12px 0 10px 18px; border-left:1px solid var(--line-strong); }
   .card-stats div:first-child{ padding-left:0; border-left:0; }
-  .card-stats strong{ display:block; font-family:var(--font-display); font-weight:700; font-size:clamp(38px,5vw,56px); line-height:1; color:var(--accent-bright); font-variant-numeric:tabular-nums; }
+  .card-stats strong{ display:block; font-family:var(--font-display); font-weight:400; font-size:clamp(38px,5vw,56px); line-height:1; color:var(--accent-bright); font-variant-numeric:tabular-nums; }
   .card-stats span{ display:block; margin-top:6px; font-family:var(--font-ui); font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:#b9b0a2; }
   .card.no-photo .card-text{ font-size:19px; max-width:none; }
   @media (min-width:621px){
@@ -786,6 +786,7 @@
   }
   .drawer-close:hover{ color:var(--ink); }
   /* Contadores: lo primero que se lee */
+  .convict-stats[hidden]{ display:none !important; }
   .convict-stats{ flex:0 0 auto; display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--line); }
   .convict-stats.is-single{ grid-template-columns:1fr; }
   .drawer-titles{ display:flex; flex-direction:column; gap:4px; min-width:0; }
@@ -794,6 +795,7 @@
   .convict-stat{ padding:16px 28px 14px; }
   .convict-stat + .convict-stat{ border-left:1px solid var(--line); }
   .convict-stat .num{ display:block; font-family:var(--font-display); font-size:44px; line-height:1; color:var(--accent-text); font-variant-numeric:tabular-nums; }
+  .convict-stat .num.is-text{ font-size:34px; line-height:1.15; }
   .convict-stat .lbl{ display:block; margin-top:8px; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-dim); }
   .drawer-body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:8px 28px 26px; }
 
@@ -1045,12 +1047,48 @@
       padding-bottom:env(safe-area-inset-bottom,0px); }
     .convict-drawer.is-open{ transform:none; }
     .drawer-head{ padding-left:20px; }
-    .convict-stat{ padding:12px 20px 10px; }
-    .convict-stat .num{ font-size:34px; }
+    .convict-stats{ grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .convict-stats.is-single{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .convict-stat{ padding:12px 12px 10px; }
+    .convict-stat:first-child{ padding-left:20px; }
+    .convict-stat .num{ font-size:30px; }
+    .convict-stat .lbl{ font-size:10px; letter-spacing:.08em; margin-top:6px; }
     .drawer-body{ padding:4px 20px 22px; }
   }
   @media (max-width:420px){
     .convict-row{ flex-wrap:wrap; gap:6px 10px; }
+  }
+
+  /* Panel de condenas en PC: ventana central tipo expediente (cifras a la izquierda, lista en dos columnas) */
+  .convict-cols{ display:block; }
+  .convict-force{ margin-top:18px; }
+  .convict-force.is-cont{ display:none; }
+  .convict-entry:has(+ .convict-force){ border-bottom:none; }
+  @media (min-width:761px) and (min-height:561px){
+    .convict-drawer{
+      top:0; bottom:0; left:0; right:0; margin:auto;
+      width:min(1140px, 94vw); height:min(620px, calc(100dvh - 120px)); max-height:none;
+      display:grid; grid-template-columns:300px minmax(0,1fr); grid-template-rows:auto minmax(0,1fr);
+      grid-template-areas:"head body" "stats body";
+      transform:translateY(-10px) scale(.97); transform-origin:center;
+    }
+    .convict-drawer.is-open{ transform:none; }
+    .drawer-head{ grid-area:head; padding:26px 26px 8px; border-bottom:none; border-right:1px solid var(--line); align-items:flex-start; }
+    .drawer-close{ position:absolute; top:10px; right:10px; z-index:2; }
+    .convict-stats, .convict-stats.is-single{ grid-area:stats; display:flex; flex-direction:column; gap:22px; align-content:flex-start;
+      padding:14px 26px 26px; border-bottom:none; border-right:1px solid var(--line); }
+    .convict-stat, .convict-stat + .convict-stat{ padding:0; border-left:none; }
+    .convict-stat .num{ font-size:54px; }
+    /* una sola cifra: grande y centrada en la columna */
+    .convict-stats.is-single{ justify-content:center; padding-bottom:90px; }
+    .convict-stats.is-single .convict-stat .num{ font-size:132px; }
+    .convict-stats.is-single .convict-stat .lbl{ margin-top:14px; font-size:var(--fs-sm); }
+    .drawer-body{ grid-area:body; padding:46px 34px 26px 30px; }
+    .convict-cols{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 34px; align-items:start; }
+    .convict-cols.is-one{ grid-template-columns:minmax(0,640px); }
+    .convict-force.is-cont{ display:flex; }
+    .convict-force{ margin-top:18px; }
+    .convict-col > .convict-force:first-child{ margin-top:0; }
   }
 
   /* En pantallas táctiles el estado "hover" queda pegado después de tocar: se neutraliza */
@@ -2646,6 +2684,23 @@
     if (isFinalHito(h)) return accumulatedJuicioIds();
     return h && h.juicio ? [h.juicio] : [];
   }
+  /* Años de una pena: la perpetua cuenta como 25 */
+  function penaYears(t){
+    if (/perpetua/i.test(t)) return 25;
+    var a = t.match(/(\d+) años/), m = t.match(/(\d+) meses/);
+    return (a ? +a[1] : 0) + (m ? +m[1] / 12 : 0);
+  }
+  /* Pena más alta de un conjunto de condenas: la perpetua gana; si no, la de más años */
+  function topPena(list){
+    var best = null, bestY = -1;
+    list.forEach(function(c){
+      var y = /perpetua/i.test(c.pena) ? 1000 : penaYears(c.pena);
+      if (y > bestY){ bestY = y; best = c.pena; }
+    });
+    if (!best) return '—';
+    if (/perpetua/i.test(best)) return 'Perpetua';
+    return best.replace(' de prisión', '');
+  }
   function renderConvictDrawer(){
     var finalHito = isFinalHito(HITOS[state.index]);
     var juicioIds = drawerJuicioIds();
@@ -2666,29 +2721,33 @@
     relevant.forEach(function(c){ causas[c.juicio] = true; personas[c.condenado] = true; });
     el.convictStats.innerHTML = '';
     el.convictStats.classList.toggle('is-single', single);
+    el.convictStats.hidden = (order.length === 0 && single);   /* sin condenas no hace falta un "0" grande */
+    var years = 0;
+    relevant.forEach(function(c){ years += penaYears(c.pena); });
+    var yearsTxt = finalHito ? '+' + (Math.floor(years / 100) * 100) : String(Math.round(years));
     var stats = single ? [[Object.keys(personas).length, 'Condenados en esta causa']]
-                       : [[Object.keys(personas).length, 'Condenados'], [Object.keys(causas).length, 'Causas']];
+                       : [[Object.keys(personas).length, 'Condenados'], [Object.keys(causas).length, 'Causas'], [yearsTxt, 'Años de condena sumados']];
     stats.forEach(function(s){
       var box = document.createElement('div'); box.className = 'convict-stat';
-      box.innerHTML = '<span class="num">' + s[0] + '</span><span class="lbl">' + s[1] + '</span>';
+      box.innerHTML = '<span class="num' + (String(s[0]).length > 5 ? ' is-text' : '') + '">' + s[0] + '</span><span class="lbl">' + s[1] + '</span>';
       el.convictStats.appendChild(box);
     });
     if (order.length === 0){
       var empty = document.createElement('p');
       empty.className = 'panel-hint';
-      empty.style.marginTop = '16px';
-      empty.textContent = single ? 'Esta causa no tiene condenas cargadas.' : 'Todavía no hay condenas en esta etapa.';
+      empty.style.marginTop = '20px'; empty.style.fontSize = '16px'; empty.style.lineHeight = '1.6'; empty.style.paddingBottom = '10px';
+      empty.textContent = single ? 'En esta causa no se dictaron condenas: los responsables fallecieron antes de poder ser juzgados.' : 'Todavía no hay condenas en esta etapa.';
       el.convictList.appendChild(empty);
     } else {
+      /* lista plana: encabezados de fuerza y condenados; después se reparte en dos columnas */
+      var flat = [];
       order.forEach(function(force){
-        var group = document.createElement('div');
-        group.className = 'convict-group';
         var names = Object.keys(byForce[force]);
         var forceLabel = document.createElement('div');
         forceLabel.className = 'convict-force';
         forceLabel.innerHTML = '<span></span><span class="n">' + names.length + '</span>';
         forceLabel.firstChild.textContent = force;
-        group.appendChild(forceLabel);
+        flat.push({ head:true, force:force, node:forceLabel, w:1.6 });
 
         names.forEach(function(name){
           var entry = document.createElement('div');
@@ -2705,7 +2764,7 @@
             tag.className = 'pena-tag';
             tag.textContent = items[0].pena;
             entry.appendChild(tag);
-            group.appendChild(entry);
+            flat.push({ node:entry, force:force, w:1.3 });
             return;
           }
           /* una fila por condena: la causa a la izquierda y la pena a la derecha, siempre alineadas */
@@ -2722,10 +2781,40 @@
             row.appendChild(t);
             entry.appendChild(row);
           });
-          group.appendChild(entry);
+          flat.push({ node:entry, force:force, w:1.1 + items.length * 0.95 });
         });
-        el.convictList.appendChild(group);
       });
+
+      var total = flat.reduce(function(a, f){ return a + f.w; }, 0);
+      var nEntries = flat.filter(function(f){ return !f.head; }).length;
+      var cols = document.createElement('div');
+      cols.className = 'convict-cols';
+      var c1 = document.createElement('div'), c2 = document.createElement('div');
+      c1.className = c2.className = 'convict-col';
+      var acc = 0, k = 0;
+      if (nEntries >= 12){
+        /* corta cerca de la mitad, siempre antes de un condenado (nunca justo después de un encabezado) */
+        for (; k < flat.length; k++){
+          if (!flat[k].head && acc + flat[k].w / 2 > total / 2) break;
+          acc += flat[k].w;
+        }
+        while (k > 0 && flat[k - 1].head) k--;
+      } else { k = flat.length; }
+      flat.slice(0, k).forEach(function(f){ c1.appendChild(f.node); });
+      var rest = flat.slice(k);
+      if (rest.length){
+        if (!rest[0].head){
+          var cont = document.createElement('div');
+          cont.className = 'convict-force is-cont';
+          cont.innerHTML = '<span></span>';
+          cont.firstChild.textContent = rest[0].force;
+          c2.appendChild(cont);
+        }
+        rest.forEach(function(f){ c2.appendChild(f.node); });
+      }
+      cols.appendChild(c1);
+      if (rest.length) cols.appendChild(c2); else cols.classList.add('is-one');
+      el.convictList.appendChild(cols);
     }
   }
 
@@ -2750,12 +2839,8 @@
   var sheetMQ = window.matchMedia ? window.matchMedia('(max-width:760px), (max-height:560px)') : null;
   function positionDrawerNearTrigger(){
     if (sheetMQ && sheetMQ.matches){ el.convictDrawer.style.top = ''; el.convictDrawer.style.right = ''; return; }
-    var containerRect = screens.mapa.getBoundingClientRect();
-    var btnRect = el.btnCondenas.getBoundingClientRect();
-    var top = btnRect.bottom - containerRect.top + 10;
-    var right = containerRect.right - btnRect.right;
-    el.convictDrawer.style.top = top + 'px';
-    el.convictDrawer.style.right = Math.max(right, 10) + 'px';
+    /* en PC el panel queda centrado por CSS */
+    el.convictDrawer.style.top = ''; el.convictDrawer.style.right = '';
   }
 
   /* Reproductor de testimonios: tapa todo, apaga los sonidos de papel y pausa al cerrar */
