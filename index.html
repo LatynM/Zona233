@@ -193,7 +193,17 @@
   }
   .splash-inst img{ display:block; height:28px; width:auto; opacity:.6; }
   @media (max-height:640px){ .splash-inst{ position:static; margin-top:28px; } }
-  .splash-logo{ display:block; width:min(72vw, 400px); height:auto; mix-blend-mode:lighten; }
+  .splash-logo-wrap{ position:relative; width:min(72vw, 400px); aspect-ratio:1000 / 612; }
+  .splash-logo, .splash-logo-still{ position:absolute; inset:0; display:block; width:100%; height:100%; opacity:0; mix-blend-mode:lighten; }
+  /* el video y la imagen ya traen el color de fondo de la portada: si un navegador no aplica la mezcla, igual no se ve un recuadro negro */
+  .splash-logo-wrap.is-video .splash-logo{ opacity:1; }
+  .splash-logo-wrap.is-still .splash-logo{ display:none; }
+  .splash-logo-wrap.is-still .splash-logo-still{ opacity:1; }
+  .splash-logo-wrap.is-still.is-anim .splash-logo-still{ animation: logoStillIn 1.4s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes logoStillIn{
+    from{ opacity:0; filter:blur(10px); transform:scale(.94); }
+    to{ opacity:1; filter:blur(0); transform:none; }
+  }
   .tagline{
     font-family:var(--font-ui);
     font-size:var(--fs-sm);
@@ -985,7 +995,7 @@
     /* portada */
     #splash{ overflow-y:auto; justify-content:flex-start; padding-top:calc(14px + env(safe-area-inset-top,0px)); }
     .splash-inner{ gap:10px; margin:auto 0; }
-    .splash-logo{ width:min(72vw, 400px, calc(36vh * 1.63)); }
+    .splash-logo-wrap{ width:min(72vw, 400px, calc(36vh * 1.63)); }
     .tagline{ margin:0; }
     .start-btn{ margin-top:2px; padding:11px 26px; min-height:44px; }
     .about-link{ margin-top:6px; }
@@ -1142,11 +1152,16 @@
     <!-- ===================== SPLASH ===================== -->
     <section id="splash" class="screen" data-state="active">
       <div class="splash-inner">
-        <!-- Logo animado: blanco sobre negro, fusionado con el fondo (mix-blend-mode: lighten) -->
-        <video class="splash-logo" id="splashLogo" muted playsinline preload="auto" width="1000" height="612" aria-label="Zona 233">
-          <source src="assets/video/logo-zona233.mp4" type="video/mp4">
-          <source src="assets/video/logo-zona233.webm" type="video/webm">
-        </video>
+        <!-- Logo animado: el video trae el color de fondo de la portada y además se mezcla con el resplandor (lighten).
+             Queda oculto hasta mostrar su primer cuadro; si el navegador no lo deja arrancar
+             (iPhone con ahorro de batería, navegadores de apps), aparece la imagen fija con una entrada suave. -->
+        <div class="splash-logo-wrap" id="splashLogoWrap">
+          <video class="splash-logo" id="splashLogo" muted playsinline preload="auto" width="1000" height="612" aria-label="Zona 233">
+            <source src="assets/video/logo-zona233.mp4" type="video/mp4">
+            <source src="assets/video/logo-zona233.webm" type="video/webm">
+          </video>
+          <img class="splash-logo-still" src="assets/img/logo-zona233-final.webp" alt="" width="1000" height="612" aria-hidden="true">
+        </div>
         <p class="tagline">La red clandestina de la dictadura en Resistencia.</p>
         <button class="start-btn" id="btnStart" type="button">Empezar recorrido</button>
         <button class="about-link" id="aboutLink" type="button">¿Quiénes somos? →</button>
@@ -1772,14 +1787,30 @@
   function startSplashAnimation(){
     var v = el.splashLogo;
     if (!v) return;
-    function showFinal(){
-      var go = function(){ try { v.pause(); v.currentTime = Math.max(0, v.duration - 0.05); } catch (e) {} };
-      if (v.readyState >= 1) go(); else v.addEventListener('loadedmetadata', go, { once: true });
+    var wrap = document.getElementById('splashLogoWrap');
+    var done = false, timer = 0;
+    /* el video recién se muestra cuando ya dibujó su primer cuadro: así no aparece el recuadro gris */
+    function showVideo(){
+      if (done) return; done = true; clearTimeout(timer);
+      wrap.classList.add('is-video');
+    }
+    /* si no arranca, se usa la imagen fija (con entrada suave, salvo que se pidan menos animaciones) */
+    function showStill(anim){
+      if (done) return; done = true; clearTimeout(timer);
+      try { v.pause(); } catch (e) {}
+      wrap.classList.add('is-still');
+      if (anim) wrap.classList.add('is-anim');
     }
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce){ showFinal(); return; }
-    var p = v.play();
-    if (p && p.catch) p.catch(showFinal);
+    if (reduce){ showStill(false); return; }
+    v.addEventListener('playing', function(){
+      if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(function(){ showVideo(); });
+      else setTimeout(showVideo, 60);
+    }, { once:true });
+    timer = setTimeout(function(){ showStill(true); }, 1800);
+    var p;
+    try { p = v.play(); } catch (e) { showStill(true); return; }
+    if (p && p.catch) p.catch(function(){ showStill(true); });
   }
 
   /* ------------------------------------------------------------------
