@@ -1,7 +1,30 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
-<title>Zona 233 · Desarrollo</title>
+<title>Zona 233 · La red clandestina de la dictadura en Resistencia</title>
+<meta name="description" content="Recorrido interactivo por los juicios de lesa humanidad en el Chaco y los centros clandestinos de detención de Resistencia: memoria, verdad y justicia, hito por hito.">
+<meta name="theme-color" content="#0b0a09">
+<link rel="canonical" href="https://zona233.vercel.app/">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<!-- Vista previa al compartir el link (WhatsApp, Instagram, Facebook, X, Telegram) -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_AR">
+<meta property="og:site_name" content="Zona 233">
+<meta property="og:title" content="Zona 233 · La red clandestina de la dictadura en Resistencia">
+<meta property="og:description" content="Recorrido interactivo por los juicios de lesa humanidad en el Chaco y los centros clandestinos de detención de Resistencia: memoria, verdad y justicia, hito por hito.">
+<meta property="og:url" content="https://zona233.vercel.app/">
+<meta property="og:image" content="https://zona233.vercel.app/assets/img/og-zona233.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Logo de Zona 233: una huella digital junto al nombre del proyecto, sobre fondo oscuro.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Zona 233 · La red clandestina de la dictadura en Resistencia">
+<meta name="twitter:description" content="Recorrido interactivo por los juicios de lesa humanidad en el Chaco y los centros clandestinos de detención de Resistencia: memoria, verdad y justicia, hito por hito.">
+<meta name="twitter:image" content="https://zona233.vercel.app/assets/img/og-zona233.jpg">
 <style>
   /* Capas: marco de legajo con barra superior fija + una grilla central donde
      cuatro vistas (splash, línea de tiempo, mapa, quiénes somos) se deslizan
@@ -285,7 +308,38 @@
   .nav-arrow svg{ transition:transform .2s ease; }
   .nav-arrow:disabled{ color:var(--ink-faint); opacity:.4; cursor:default; }
   /* si el avance espera a que se vea el mapa, la flecha lo insinúa sin gritar */
-  .nav-arrow-next.is-waiting{ border-style:dashed; }
+  .nav-arrow-next.is-waiting{ border-style:dashed; color:var(--ink-faint); cursor:not-allowed; }
+  .nav-arrow-next.is-waiting:hover{ background:rgba(11,10,9,.72); border-color:var(--line-strong); color:var(--ink-faint); }
+  .nav-arrow-next.is-waiting:hover svg{ transform:none; }
+  /* al intentar avanzar sin haber visto el mapa: la flecha dice que no y el botón se ilumina */
+  .nav-arrow-next.is-nope{ animation: arrowNope .42s ease both; }
+  @keyframes arrowNope{
+    0%,100%{ transform:translateY(-50%) translateX(0); }
+    20%{ transform:translateY(-50%) translateX(-7px); }
+    40%{ transform:translateY(-50%) translateX(6px); }
+    60%{ transform:translateY(-50%) translateX(-4px); }
+    80%{ transform:translateY(-50%) translateX(2px); }
+  }
+  .card-cta.is-nudge{ animation: ctaNudge 1.1s ease-out 2; }
+  @keyframes ctaNudge{
+    0%{ background:var(--accent); color:var(--paper); box-shadow:0 0 0 0 rgba(200,40,45,.65); }
+    55%{ background:var(--accent); color:var(--paper); }
+    100%{ background:transparent; box-shadow:0 0 0 16px rgba(200,40,45,0); }
+  }
+  .cta-hint{
+    position:fixed; z-index:40; pointer-events:none;
+    background:var(--paper); color:#14110f;
+    font-family:var(--font-ui); font-size:var(--fs-sm); font-weight:600; letter-spacing:.02em;
+    padding:8px 12px; max-width:min(320px, calc(100vw - 32px));
+    box-shadow:0 8px 24px rgba(0,0,0,.45);
+    opacity:0; transform:translateY(6px); transition:opacity .2s ease, transform .2s ease;
+  }
+  .cta-hint::after{ content:""; position:absolute; left:var(--tip-x, 22px); bottom:-6px; width:12px; height:12px; background:var(--paper); transform:rotate(45deg); }
+  .cta-hint.is-on{ opacity:1; transform:none; }
+  @media (prefers-reduced-motion: reduce){
+    .nav-arrow-next.is-nope, .card-cta.is-nudge{ animation:none; }
+    .card-cta.is-nudge{ background:var(--accent); color:var(--paper); }
+  }
 
   .card{
     position:relative; z-index:1;
@@ -1126,6 +1180,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Archivo+Narrow:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
 
 <svg class="watermark-layer" aria-hidden="true">
   <defs>
@@ -1784,7 +1840,7 @@
 
   /* Reproduce una vez el logo animado. Si el navegador no deja reproducir solo,
      o la persona pidió reducir el movimiento, muestra directamente el cuadro final. */
-  function startSplashAnimation(){
+  function startSplashAnimation(stillOnly){
     var v = el.splashLogo;
     if (!v) return;
     var wrap = document.getElementById('splashLogoWrap');
@@ -1802,7 +1858,7 @@
       if (anim) wrap.classList.add('is-anim');
     }
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce){ showStill(false); return; }
+    if (reduce || stillOnly){ showStill(false); return; }
     v.addEventListener('playing', function(){
       if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(function(){ showVideo(); });
       else setTimeout(showVideo, 60);
@@ -1882,6 +1938,8 @@
     changeHito(HITOS.length - 1);
   }
   function setTopbar(view){
+    syncHistory(view);
+    saveProgress();
     if (view === 'splash'){
       el.topbar.classList.remove('is-visible');
       return;
@@ -2171,8 +2229,11 @@
     el.btnPrev.disabled = isFirst;
 
     el.btnNext.hidden = isLast;
-    el.btnNext.disabled = isLast || needsResolution;
+    el.btnNext.disabled = isLast;
     el.btnNext.classList.toggle('is-waiting', needsResolution);
+    el.btnNext.setAttribute('aria-disabled', needsResolution ? 'true' : 'false');
+    el.btnNext.setAttribute('aria-label', needsResolution ? 'Para avanzar, primero abrí ¿Qué se reconstruyó?' : 'Siguiente hito');
+    if (!needsResolution) hideCtaHint();
 
     if (state.view === 'timeline') setTopbar('timeline');  /* en la portada la barra queda oculta */
     renderTrack();
@@ -2183,6 +2244,7 @@
   function changeHito(newIndex){
     if (newIndex === state.index || newIndex < 0 || newIndex >= HITOS.length) return;
     skipAsking = false;
+    hideCtaHint();
     clearTimeout(autoAdvanceTimer);
     clearTimeout(hitoTimer);
     var dir = newIndex > state.index ? 'next' : 'prev';
@@ -2206,7 +2268,37 @@
     void st.offsetWidth;
     st.classList.add('stamp-anim');
   }
-  function goNext(){ if (!el.btnNext.disabled) changeHito(state.index + 1); }
+  function goNext(){
+    if (el.btnNext.disabled || el.btnNext.hidden) return;
+    if (el.btnNext.classList.contains('is-waiting')){ nudgeLocked(); return; }
+    changeHito(state.index + 1);
+  }
+  /* Intento de avanzar con un juicio sin ver: la flecha "dice que no" y el botón del mapa se ilumina con un aviso */
+  var ctaHintTimer = null, ctaHintEl = null;
+  function nudgeLocked(){
+    var a = el.btnNext, b = el.cardCta;
+    a.classList.remove('is-nope'); b.classList.remove('is-nudge');
+    void a.offsetWidth;
+    a.classList.add('is-nope'); b.classList.add('is-nudge');
+    clearTimeout(ctaHintTimer);
+    ctaHintTimer = setTimeout(function(){ a.classList.remove('is-nope'); b.classList.remove('is-nudge'); hideCtaHint(); }, 2600);
+    if (!ctaHintEl){
+      ctaHintEl = document.createElement('div');
+      ctaHintEl.className = 'cta-hint';
+      ctaHintEl.setAttribute('role', 'status');
+      document.body.appendChild(ctaHintEl);
+    }
+    ctaHintEl.textContent = 'Para seguir, tocá acá primero';
+    var r = b.getBoundingClientRect();
+    if (!r.width) return;
+    var hw = Math.min(ctaHintEl.offsetWidth || 220, window.innerWidth - 32);
+    var left = Math.max(16, Math.min(r.left, window.innerWidth - 16 - hw));
+    ctaHintEl.style.left = left + 'px';
+    ctaHintEl.style.top = Math.max(8, r.top - ctaHintEl.offsetHeight - 12) + 'px';
+    ctaHintEl.style.setProperty('--tip-x', Math.max(10, Math.min(hw - 22, r.left + Math.min(r.width, 160) / 2 - left - 6)) + 'px');
+    ctaHintEl.classList.add('is-on');
+  }
+  function hideCtaHint(){ if (ctaHintEl) ctaHintEl.classList.remove('is-on'); }
   function goPrev(){ changeHito(state.index - 1); }
   /* En pantallas táctiles: deslizar hacia los costados sobre la ficha cambia de hito */
   (function(){
@@ -2220,7 +2312,7 @@
       if (!on) return; on = false;
       var t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
       if (Date.now() - st > 700 || Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
-      if (dx < 0){ if (!el.btnNext.hidden && !el.btnNext.disabled) goNext(); }
+      if (dx < 0) goNext();
       else if (!el.btnPrev.hidden && !el.btnPrev.disabled) goPrev();
     }, { passive:true });
   })();
@@ -2270,6 +2362,7 @@
 
   function openMapa(){
     clearTimeout(autoAdvanceTimer);
+    hideCtaHint();
     playOpen('mapa');
     closeOverlays();
     state.selectedCcd = null;
@@ -2946,7 +3039,7 @@
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape'){ if (!closeVideo()) closeOverlays(); }
     if (state.view === 'timeline'){
-      if (e.key === 'ArrowRight' && !el.btnNext.hidden && !el.btnNext.disabled) goNext();
+      if (e.key === 'ArrowRight') goNext();
       if (e.key === 'ArrowLeft' && !el.btnPrev.hidden && !el.btnPrev.disabled) goPrev();
     }
   });
@@ -2969,11 +3062,97 @@
   });
 
   /* ------------------------------------------------------------------
+     PROGRESO Y GESTO "ATRÁS"
+     El progreso se guarda solo mientras la pestaña está abierta (sessionStorage):
+     al recargar se retoma; al cerrar la pestaña se empieza de cero.
+     El historial del navegador lleva una entrada "guarda" mientras se está dentro
+     del recorrido: el gesto o botón atrás cierra lo que esté abierto o vuelve un paso
+     dentro de la página, y recién desde la portada sale del sitio.
+  ------------------------------------------------------------------- */
+  var SAVE_KEY = 'zona233-progreso';
+  function saveProgress(){
+    try {
+      var res = [];
+      HITOS.forEach(function(h){ if (h.resuelto) res.push(h.id); });
+      sessionStorage.setItem(SAVE_KEY, JSON.stringify({
+        v:1, view:state.view, index:state.index, max:state.maxReached || 0,
+        res:res, watched:watched, notice:noticeShown, tip:seenTip
+      }));
+    } catch (e) {}
+  }
+  function loadProgress(){
+    var d = null;
+    try { d = JSON.parse(sessionStorage.getItem(SAVE_KEY) || 'null'); } catch (e) {}
+    if (!d || d.v !== 1 || !(d.index >= 0 && d.index < HITOS.length)) return null;
+    state.index = d.index;
+    state.maxReached = Math.max(d.max || 0, d.index);
+    HITOS.forEach(function(h){ if (h.tieneJuicio) h.resuelto = (d.res || []).indexOf(h.id) !== -1; });
+    if (d.watched) for (var k in d.watched) watched[k] = d.watched[k];
+    noticeShown = !!d.notice;
+    if (d.tip){ seenTip.victims = !!d.tip.victims; seenTip.map = !!d.tip.map; }
+    return d;
+  }
+  window.addEventListener('pagehide', saveProgress);
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') saveProgress(); });
+
+  var guardArmed = !!(history.state && history.state.zona233 === 'guarda');
+  var ignorePop = false;
+  function syncHistory(view){
+    try {
+      if (view !== 'splash' && !guardArmed){
+        history.pushState({ zona233:'guarda' }, '');
+        guardArmed = true;
+      } else if (view === 'splash' && guardArmed){
+        /* se volvió a la portada con los botones de la página: se consume la entrada guarda */
+        guardArmed = false; ignorePop = true;
+        history.back();
+      }
+    } catch (e) {}
+  }
+  function overlayIsOpen(){
+    return el.ccdPopup.classList.contains('is-open') || el.convictDrawer.classList.contains('is-open');
+  }
+  window.addEventListener('popstate', function(){
+    if (ignorePop){ ignorePop = false; return; }
+    guardArmed = false;
+    if (state.view === 'splash') return;          /* desde la portada, atrás sale del sitio */
+    if (closeVideo()) { /* primero se cierra el video */ }
+    else if (overlayIsOpen()) closeOverlays();
+    else if (state.view === 'mapa'){
+      playRewind();
+      closeOverlays();
+      crossTo('timeline', null, 'recede');
+      requestAnimationFrame(positionTrack);
+    } else {
+      playRewind();
+      closeOverlays();
+      setScreen('splash', 'back');
+    }
+    if (state.view !== 'splash' && !guardArmed){
+      try { history.pushState({ zona233:'guarda' }, ''); guardArmed = true; } catch (e) {}
+    }
+  });
+
+  /* ------------------------------------------------------------------
      INICIO
   ------------------------------------------------------------------- */
-  startSplashAnimation();
+  var saved = loadProgress();
+  var resumeView = saved && (saved.view === 'timeline' || saved.view === 'mapa' || saved.view === 'about') ? saved.view : null;
+  startSplashAnimation(!!resumeView);
   setTimeout(warmPhotos, 3000);   /* en la portada, mientras se lee, se adelantan las fotos */
   renderTimeline();
+  if (resumeView === 'timeline' || resumeView === 'mapa'){
+    /* al recargar se vuelve directo a donde estaba */
+    warmPhotos();
+    if (resumeView === 'mapa') crossTo('mapa', renderMapaScreen, 'dive');
+    else { crossTo('timeline', renderTimeline, 'dive'); requestAnimationFrame(positionTrack); }
+  } else if (resumeView === 'about'){
+    enterScreen('about', null);
+  } else {
+    syncHistory('splash');
+  }
 
 })();
 </script>
+</body>
+</html>
