@@ -1144,7 +1144,7 @@
         <button class="continue-btn" id="btnContinue" type="button">¿Cómo siguió?</button>
       </div>
 
-      <div class="info-tip" id="mapInfoTip" role="tooltip">Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.</div>
+      <div class="info-tip" id="mapInfoTip" role="tooltip">Cada pin representa uno de los CCD del aparato represivo en Resistencia. Cuando una sentencia <b>revela</b> una parte de su verdad, se <b>ilumina</b>. <b>Tocá un pin</b> para ver qué se reconstruyó hasta ahora.</div>
 
       <div class="new-testimonio" id="newTestimonio" role="status" aria-live="polite">Este mapa guarda un microdocumental. Tocá el pin que late.</div>
 
@@ -2146,8 +2146,8 @@
     var eb = document.getElementById('mapEyebrow'); if (eb) eb.textContent = finalHito ? 'Zona 233' : '¿Qué se reconstruyó?';
     var tip = document.getElementById('mapInfoTip');
     if (tip) tip.innerHTML = finalHito
-      ? 'Cada pin es un lugar de la red represiva en Resistencia. Con todas las sentencias reunidas, <b>todos</b> están en rojo. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.'
-      : 'Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.';
+      ? 'Cada pin representa uno de los CCD del aparato represivo en Resistencia. Con todas las sentencias reunidas, <b>todos</b> se iluminan. <b>Tocá un pin</b> para ver todo lo que se reconstruyó.'
+      : 'Cada pin representa uno de los CCD del aparato represivo en Resistencia. Cuando una sentencia <b>revela</b> una parte de su verdad, se <b>ilumina</b>. <b>Tocá un pin</b> para ver qué se reconstruyó hasta ahora.';
     buildMapMarkers();
     updateCondenasBadge();
     showNewTestimonioNotice();
@@ -2159,11 +2159,40 @@
      (celular vertical, tablet vertical) se abre lo justo para que entren los 8 sitios;
      el mapa queda en una franja central y arriba y abajo se funde con el fondo. */
   var MAP_REQ = { x0:240, x1:1040 };
+  /* Celular o tablet en vertical: el mapa se gira 90° en el sentido de las agujas del reloj,
+     así los sitios (repartidos a lo ancho de la ciudad) ocupan el alto de la pantalla.
+     Un punto (x, y) del mapa pasa a (MAP_H - y, x). Los pines no se giran. */
+  var mapRot = false;
+  function P(ccd){ return mapRot ? { x: MAP_H - ccd.y, y: ccd.x } : { x: ccd.x, y: ccd.y }; }
+  var ROT_REQ = { y0:245, y1:990 };   /* franja (ya girada) donde caen los 8 sitios con sus cabezas */
   function computeMapView(){
     var W = el.mapSvg.clientWidth || el.mapSvg.getBoundingClientRect().width;
     var H = el.mapSvg.clientHeight || el.mapSvg.getBoundingClientRect().height;
     if (!W || !H) return false;
     var A = W / H, vw, vh;
+    mapRot = A < 0.85;
+    if (mapRot){
+      var CW = MAP_H, CH = MAP_W;
+      /* lo que tapan el encabezado del mapa y los botones de abajo, en píxeles */
+      var sr = el.mapSvg.getBoundingClientRect();
+      var sh = document.querySelector('#mapa .map-subheader'), ft = document.querySelector('#mapa .map-footer');
+      var topPx = sh ? Math.max(0, sh.getBoundingClientRect().bottom - sr.top - 24) : 70;
+      var botPx = ft ? Math.max(0, sr.bottom - ft.getBoundingClientRect().top) : 100;
+      if (A >= CW / CH){ vw = CW; vh = CW / A; } else { vh = CH; vw = CH * A; }
+      var need = (ROT_REQ.y1 - ROT_REQ.y0) / Math.max(0.3, 1 - (topPx + botPx) / H);
+      if (vh < need){ vh = Math.min(need, CW / A); vw = vh * A; }   /* nunca más ancho que el mapa: sin franjas a los costados */
+      var kk = H / vh;
+      var vy = (ROT_REQ.y0 + ROT_REQ.y1) / 2 - (vh + (topPx - botPx) / kk) / 2;
+      if (vh <= CH) vy = Math.max(0, Math.min(CH - vh, vy));
+      var vx = (CW - vw) / 2;
+      var k2 = W / vw;
+      mapView = { x:vx, y:vy, w:vw, h:vh, k:k2, letterbox:false,
+                  pin: Math.max(PIN_SCALE, PIN_MIN_PX / (PIN_H_UNITS * k2)) };
+      var vb2 = vx.toFixed(1) + ' ' + vy.toFixed(1) + ' ' + vw.toFixed(1) + ' ' + vh.toFixed(1);
+      el.mapSvg.setAttribute('viewBox', vb2);
+      el.mapMarkersSvg.setAttribute('viewBox', vb2);
+      return true;
+    }
     if (A >= MAP_W / MAP_H){ vw = MAP_W; vh = MAP_W / A; } else { vh = MAP_H; vw = MAP_H * A; }
     var reqW = MAP_REQ.x1 - MAP_REQ.x0;
     if (vw < reqW){ vw = reqW; vh = vw / A; }
@@ -2204,9 +2233,11 @@
     }
 
     var svgParts = [];
-    svgParts.push('<rect x="' + Math.min(0, mapView.x) + '" y="' + Math.min(0, mapView.y) + '" width="' + Math.max(MAP_W, mapView.w) + '" height="' + Math.max(MAP_H, mapView.h) + '" fill="var(--bg-raised)"/>');
+    svgParts.push('<rect x="' + Math.min(0, mapView.x) + '" y="' + Math.min(0, mapView.y) + '" width="' + Math.max(MAP_W, mapView.w) + '" height="' + Math.max(MAP_W, mapView.h) + '" fill="var(--bg-raised)"/>');
     if (mapBgSrc){
-      svgParts.push('<image class="map-bg-img" href="' + mapBgSrc + '" x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" preserveAspectRatio="none"/>');
+      svgParts.push((mapRot ? '<g transform="translate(' + MAP_H + ' 0) rotate(90)">' : '') +
+        '<image class="map-bg-img" href="' + mapBgSrc + '" x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" preserveAspectRatio="none"/>' +
+        (mapRot ? '</g>' : ''));
       if (mapView.letterbox){
         svgParts.push(
           '<defs><linearGradient id="fadeTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17140f"/><stop offset="1" stop-color="#17140f" stop-opacity="0"/></linearGradient>' +
@@ -2237,7 +2268,8 @@
         '<filter id="pinGlowBlur" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="12"/></filter>' +
       '</defs>'
     );
-    CCDS.forEach(function(ccd){
+    CCDS.forEach(function(ccd0){
+      var pp = P(ccd0), ccd = { id:ccd0.id, nombre:ccd0.nombre, x:pp.x, y:pp.y };
       var lit = !!litCcds[ccd.id];
       var selected = state.selectedCcd === ccd.id;
       /* Iluminado = rojo pleno; sin reconstruir = el mismo rojo, mucho más oscuro. Todos con un marco gris oscuro muy fino. */
@@ -2326,10 +2358,11 @@
     if (!r.width || !r.height) return;
     var scale = mapView.k || Math.max(r.width / MAP_W, r.height / MAP_H);
     var u = function(px){ return px / scale; };
-    var fontU = u(14), padX = u(11), padY = u(7), tickW = u(3), gap = u(8);
+    var fontU = u(r.width < 420 ? 12 : 14), padX = u(11), padY = u(7), tickW = u(3), gap = u(8);
     var pinH = PIN_H_UNITS * pinK(true);
 
-    CCDS.forEach(function(ccd){
+    CCDS.forEach(function(ccd0){
+      var pp = P(ccd0), ccd = { id:ccd0.id, x:pp.x, y:pp.y };
       var g = el.mapMarkersSvg.querySelector('.map-label[data-label="' + ccd.id + '"]');
       if (!g) return;
       var text = g.querySelector('text');
