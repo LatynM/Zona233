@@ -980,6 +980,13 @@
     .map-attrib{ margin-right:0; font-size:11px; }
     .continue-btn{ min-height:44px; padding:10px 16px; }
   }
+  /* Celulares muy angostos (iPhone SE y similares): los dos botones de abajo no se tocan */
+  @media (max-width:380px){
+    .drawer-trigger{ padding:8px 10px; gap:6px; font-size:12px; letter-spacing:.04em; left:max(10px, env(safe-area-inset-left,0px)); }
+    .drawer-trigger .count{ min-width:20px; height:20px; font-size:11px; padding:0 5px; }
+    .continue-btn{ padding:10px 12px; font-size:12px; letter-spacing:.03em; }
+    .map-footer{ padding-right:max(10px, env(safe-area-inset-right,0px)); }
+  }
   @media (max-width:760px) and (max-height:520px){
     .map-footer{ padding-bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
     .drawer-trigger{ bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
@@ -2159,40 +2166,40 @@
      (celular vertical, tablet vertical) se abre lo justo para que entren los 8 sitios;
      el mapa queda en una franja central y arriba y abajo se funde con el fondo. */
   var MAP_REQ = { x0:240, x1:1040 };
-  /* Celular o tablet en vertical: el mapa se gira 90° en el sentido de las agujas del reloj,
-     así los sitios (repartidos a lo ancho de la ciudad) ocupan el alto de la pantalla.
-     Un punto (x, y) del mapa pasa a (MAP_H - y, x). Los pines no se giran. */
-  var mapRot = false;
-  function P(ccd){ return mapRot ? { x: MAP_H - ccd.y, y: ccd.x } : { x: ccd.x, y: ccd.y }; }
-  var ROT_REQ = { y0:245, y1:990 };   /* franja (ya girada) donde caen los 8 sitios con sus cabezas */
+  /* Celular o tablet en vertical: se usa una imagen propia, vertical (720 × 1280), con los sitios
+     ya ubicados en ella. Si esa imagen no está, se mantiene el encuadre horizontal de siempre. */
+  var MAP_VERT_SRC = 'assets/img/mapa-resistencia-vertical.webp';
+  var MAP_VERT = { w:720, h:1280, pts:{"ccd1": [435.9, 577.9], "ccd2": [490.8, 643.9], "ccd3": [352.1, 505.0], "ccd4": [619.5, 775.0], "ccd5": [390.5, 718.3], "ccd6": [100.5, 614.5], "ccd7": [452.2, 616.4], "ccd8": [403.3, 579.5]}, cy:640 };
+  var mapVertSrc = null;
+  var mapPortrait = false;
+  function P(ccd){ return mapPortrait ? { x: MAP_VERT.pts[ccd.id][0], y: MAP_VERT.pts[ccd.id][1] } : { x: ccd.x, y: ccd.y }; }
   function computeMapView(){
     var W = el.mapSvg.clientWidth || el.mapSvg.getBoundingClientRect().width;
     var H = el.mapSvg.clientHeight || el.mapSvg.getBoundingClientRect().height;
     if (!W || !H) return false;
     var A = W / H, vw, vh;
-    mapRot = A < 0.85;
-    if (mapRot){
-      var CW = MAP_H, CH = MAP_W;
-      /* lo que tapan el encabezado del mapa y los botones de abajo, en píxeles */
+    mapPortrait = !!mapVertSrc && A < 0.85;
+    if (mapPortrait){
+      MAP_W = MAP_VERT.w; MAP_H = MAP_VERT.h;
+      vw = MAP_W; vh = vw / A;
+      if (vh > MAP_H){ vh = MAP_H; vw = vh * A; }
+      var kk = W / vw;
+      /* los sitios quedan centrados en el espacio libre entre el encabezado del mapa y los botones */
       var sr = el.mapSvg.getBoundingClientRect();
       var sh = document.querySelector('#mapa .map-subheader'), ft = document.querySelector('#mapa .map-footer');
       var topPx = sh ? Math.max(0, sh.getBoundingClientRect().bottom - sr.top - 24) : 70;
       var botPx = ft ? Math.max(0, sr.bottom - ft.getBoundingClientRect().top) : 100;
-      if (A >= CW / CH){ vw = CW; vh = CW / A; } else { vh = CH; vw = CH * A; }
-      var need = (ROT_REQ.y1 - ROT_REQ.y0) / Math.max(0.3, 1 - (topPx + botPx) / H);
-      if (vh < need){ vh = Math.min(need, CW / A); vw = vh * A; }   /* nunca más ancho que el mapa: sin franjas a los costados */
-      var kk = H / vh;
-      var vy = (ROT_REQ.y0 + ROT_REQ.y1) / 2 - (vh + (topPx - botPx) / kk) / 2;
-      if (vh <= CH) vy = Math.max(0, Math.min(CH - vh, vy));
-      var vx = (CW - vw) / 2;
-      var k2 = W / vw;
-      mapView = { x:vx, y:vy, w:vw, h:vh, k:k2, letterbox:false,
-                  pin: Math.max(PIN_SCALE, PIN_MIN_PX / (PIN_H_UNITS * k2)) };
+      var vy = MAP_VERT.cy - ((topPx + (H - botPx)) / 2) / kk;
+      vy = Math.max(0, Math.min(MAP_H - vh, vy));
+      var vx = (MAP_W - vw) / 2;
+      mapView = { x:vx, y:vy, w:vw, h:vh, k:kk, letterbox:false,
+                  pin: Math.max(PIN_SCALE, PIN_MIN_PX / (PIN_H_UNITS * kk)) };
       var vb2 = vx.toFixed(1) + ' ' + vy.toFixed(1) + ' ' + vw.toFixed(1) + ' ' + vh.toFixed(1);
       el.mapSvg.setAttribute('viewBox', vb2);
       el.mapMarkersSvg.setAttribute('viewBox', vb2);
       return true;
     }
+    MAP_W = 1280; MAP_H = 680;
     if (A >= MAP_W / MAP_H){ vw = MAP_W; vh = MAP_W / A; } else { vh = MAP_H; vw = MAP_H * A; }
     var reqW = MAP_REQ.x1 - MAP_REQ.x0;
     if (vw < reqW){ vw = reqW; vh = vw / A; }
@@ -2233,11 +2240,9 @@
     }
 
     var svgParts = [];
-    svgParts.push('<rect x="' + Math.min(0, mapView.x) + '" y="' + Math.min(0, mapView.y) + '" width="' + Math.max(MAP_W, mapView.w) + '" height="' + Math.max(MAP_W, mapView.h) + '" fill="var(--bg-raised)"/>');
+    svgParts.push('<rect x="' + Math.min(0, mapView.x) + '" y="' + Math.min(0, mapView.y) + '" width="' + Math.max(MAP_W, mapView.w) + '" height="' + Math.max(MAP_H, mapView.h) + '" fill="var(--bg-raised)"/>');
     if (mapBgSrc){
-      svgParts.push((mapRot ? '<g transform="translate(' + MAP_H + ' 0) rotate(90)">' : '') +
-        '<image class="map-bg-img" href="' + mapBgSrc + '" x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" preserveAspectRatio="none"/>' +
-        (mapRot ? '</g>' : ''));
+      svgParts.push('<image class="map-bg-img" href="' + (mapPortrait ? mapVertSrc : mapBgSrc) + '" x="0" y="0" width="' + MAP_W + '" height="' + MAP_H + '" preserveAspectRatio="none"/>');
       if (mapView.letterbox){
         svgParts.push(
           '<defs><linearGradient id="fadeTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#17140f"/><stop offset="1" stop-color="#17140f" stop-opacity="0"/></linearGradient>' +
@@ -2419,6 +2424,11 @@
     probe.src = MAP_IMG_SOURCES[i];
   }
   loadMapBackground(0);
+  (function(){
+    var pv = new Image();
+    pv.onload = function(){ mapVertSrc = MAP_VERT_SRC; if (state.view === 'mapa') buildMapMarkers(); };
+    pv.src = MAP_VERT_SRC;   /* si el archivo no existe, no pasa nada: queda el encuadre horizontal */
+  })();
 
   function setSelectedMarker(id){
     el.mapMarkersSvg.querySelectorAll('.map-label').forEach(function(g){
