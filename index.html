@@ -580,24 +580,24 @@
 
 
   /* --- Microdocumentales: contador, aviso, botón en la ficha y reproductor --- */
-  .map-testimonios{ flex-basis:100%; margin-top:2px; font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim); white-space:nowrap; }
-  .map-testimonios b{ color:var(--accent-text); font-weight:700; }
-  .vid-ring{ fill:none; stroke:var(--paper); stroke-width:2; transform-box:fill-box; transform-origin:center; animation: vidRing 1.8s ease-out infinite; pointer-events:none; }
+  /* El punto blanco acompaña al pin: apagado mientras el pin está oscuro o apareciendo, blanco cuando se enciende */
+  .vid-dot{ fill:#5e584f; transition: fill .35s ease; }
+  .map-marker.vid-on .vid-dot{ fill:#f1e9fe; }
+  .vid-ring{ fill:none; stroke:var(--paper); stroke-width:2; transform-box:fill-box; transform-origin:center; opacity:0; pointer-events:none; }
+  .map-marker.vid-on .vid-ring{ animation: vidRing 1.8s ease-out infinite; }
   @keyframes vidRing{ 0%{ transform:scale(.55); opacity:.95; } 100%{ transform:scale(1.9); opacity:0; } }
   .vid-badge circle{ fill:var(--paper); stroke:#000; stroke-width:1.5; }
   .vid-badge path{ fill:var(--bg); }
   .vid-badge.is-seen circle{ fill:var(--bg-card); stroke:var(--ink-faint); }
   .vid-badge.is-seen path{ fill:var(--ink-dim); }
   .new-testimonio{
-    position:absolute; left:50%; bottom:calc(76px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,12px);
-    z-index:6; display:flex; align-items:center; gap:10px;
-    background:rgba(11,10,9,.92); border:1px solid var(--accent-bright); color:var(--ink);
-    padding:10px 16px; font-size:var(--fs-sm); width:max-content; max-width:min(92vw,460px);
-    opacity:0; visibility:hidden; pointer-events:none; transition:opacity .4s ease, transform .4s ease, visibility .4s;
+    position:absolute; left:50%; bottom:calc(76px + env(safe-area-inset-bottom,0px)); transform:translate(-50%,10px);
+    z-index:6; background:rgba(11,10,9,.9); border:1px solid var(--line-strong); border-left:3px solid var(--accent-bright);
+    color:var(--ink); padding:9px 14px 9px 12px; width:max-content; max-width:min(92vw,420px);
+    font-family:var(--font-ui); font-size:var(--fs-xs); letter-spacing:.08em; line-height:1.5;
+    opacity:0; visibility:hidden; pointer-events:none; transition:opacity .5s ease, transform .5s ease, visibility .5s;
   }
   .new-testimonio.is-on{ opacity:1; visibility:visible; transform:translate(-50%,0); }
-  .new-testimonio .dot{ width:9px; height:9px; border-radius:50%; background:var(--accent-bright); flex:0 0 auto; animation:dotPulse 1.4s ease-in-out infinite; }
-  @keyframes dotPulse{ 50%{ opacity:.35; } }
   .popup-play{
     position:absolute; inset:0; z-index:1; width:100%; border:0; cursor:pointer; color:var(--ink);
     background:linear-gradient(to top, rgba(11,10,9,.72), rgba(11,10,9,.12) 60%);
@@ -1125,7 +1125,6 @@
         <span class="map-eyebrow" id="mapEyebrow">¿Qué se reconstruyó?</span>
         <span class="map-title" id="mapJuicioNombre">Nombre del juicio de prueba</span>
         <button class="info-btn map-info" id="mapInfoBtn" type="button" aria-label="Cómo leer este mapa" aria-describedby="mapInfoTip" aria-expanded="false">i</button>
-        <span class="map-testimonios" id="mapTestimonios" hidden></span>
       </div>
 
       <div class="map-stage">
@@ -1147,12 +1146,12 @@
 
       <div class="info-tip" id="mapInfoTip" role="tooltip">Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.</div>
 
-      <div class="new-testimonio" id="newTestimonio" role="status" aria-live="polite"><span class="dot"></span><span>Nuevo testimonio disponible. Buscá el pin que late.</span></div>
+      <div class="new-testimonio" id="newTestimonio" role="status" aria-live="polite">Este mapa guarda un microdocumental. Tocá el pin que late.</div>
 
       <!-- overlays -->
       <div class="overlay-backdrop" id="overlayBackdrop"></div>
 
-      <div class="video-layer" id="videoLayer" role="dialog" aria-modal="true" aria-label="Testimonio">
+      <div class="video-layer" id="videoLayer" role="dialog" aria-modal="true" aria-label="Microdocumental">
         <button class="video-close" id="videoClose" type="button" aria-label="Cerrar video">×</button>
         <div class="video-title" id="videoTitle"></div>
         <video id="videoEl" controls playsinline preload="none"></video>
@@ -1160,7 +1159,7 @@
 
       <div class="ccd-popup" id="ccdPopup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
         <button class="popup-close" id="popupClose" type="button" aria-label="Cerrar">×</button>
-        <div class="popup-media"><img class="site-photo" id="popupPhoto" alt="" decoding="async" hidden><div class="popup-media-label" id="popupMediaLabel">Fotografía del sitio — pendiente</div><button class="popup-play" id="popupPlay" type="button" hidden><span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5v19l16-9.5z"/></svg></span><span id="popupPlayLabel">Ver testimonio</span></button><div class="popup-lock" id="popupLock" hidden>Testimonio · se habilita más adelante</div></div>
+        <div class="popup-media"><img class="site-photo" id="popupPhoto" alt="" decoding="async" hidden><div class="popup-media-label" id="popupMediaLabel">Fotografía del sitio — pendiente</div><button class="popup-play" id="popupPlay" type="button" hidden><span class="disc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 2.5v19l16-9.5z"/></svg></span><span id="popupPlayLabel">Ver microdocumental</span></button><div class="popup-lock" id="popupLock" hidden>Microdocumental · se habilita más adelante</div></div>
         <div class="popup-head">
           <div class="popup-eyebrow" id="popupEyebrow">Centro clandestino</div>
           <h3 class="popup-title" id="popupTitle">Nombre del sitio</h3>
@@ -2116,22 +2115,15 @@
     var h = HITOS[state.index];
     return !isFinalHito(h) && !!h.tieneJuicio && TESTIMONIOS[ccdId] === h.juicio && !watched[ccdId];
   }
-  function updateTestimonioCounter(){
-    var n = 0, tot = 0;
-    for (var id in TESTIMONIOS){ tot++; if (testimonioUnlocked(id)) n++; }
-    var c = document.getElementById('mapTestimonios');
-    if (!c) return;
-    c.hidden = false;
-    c.innerHTML = 'Testimonios <b>' + n + ' / ' + tot + '</b>';
-  }
-  var newNoticeTimer = null;
+  var newNoticeTimer = null, noticeShown = false;   /* el aviso se muestra una sola vez en toda la experiencia */
   function showNewTestimonioNotice(){
     var n = document.getElementById('newTestimonio');
     clearTimeout(newNoticeTimer);
     var any = false;
     for (var id in TESTIMONIOS) if (testimonioIsNew(id)) any = true;
     if (!n) return;
-    if (!any){ n.classList.remove('is-on'); return; }
+    if (!any || noticeShown){ n.classList.remove('is-on'); return; }
+    noticeShown = true;
     newNoticeTimer = setTimeout(function(){
       n.classList.add('is-on');
       newNoticeTimer = setTimeout(function(){ n.classList.remove('is-on'); }, 9000);
@@ -2158,7 +2150,6 @@
       : 'Cada pin es un lugar de la red represiva en Resistencia. Los pines <b>rojos</b> tienen personas reconocidas en la sentencia de esta etapa. <b>Tocá un pin</b> para ver quiénes pasaron por ahí.';
     buildMapMarkers();
     updateCondenasBadge();
-    updateTestimonioCounter();
     showNewTestimonioNotice();
     var note = document.getElementById('mapProvisional');
     if (note) note.hidden = !!mapBgSrc;
@@ -2193,9 +2184,9 @@
   /* Insignia de testimonio disponible: disco con triángulo junto a la cabeza del pin; si es nuevo, un anillo que late */
   /* Testimonio disponible: el hueco del pin se pinta de blanco (gris si ya se vio) y, mientras es nuevo, salen dos ondas */
   function vidInPin(ccd){
-    var seen = !!watched[ccd.id], isNew = testimonioIsNew(ccd.id);
+    var isNew = testimonioIsNew(ccd.id);
     return (isNew ? '<circle class="vid-ring" cx="50" cy="42" r="36" style="stroke-width:6"/><circle class="vid-ring" cx="50" cy="42" r="36" style="stroke-width:6;animation-delay:.9s"/>' : '') +
-      '<circle cx="50" cy="42" r="15" fill="' + (seen ? '#8a8378' : '#f1e9fe') + '"/>';
+      '<circle class="vid-dot" cx="50" cy="42" r="15"/>';
   }
   function vidBadge(){ return ''; }
 
@@ -2255,7 +2246,7 @@
       var ringWidth = selected ? 3 : 2;
 
       markerParts.push(
-        '<g class="map-marker" data-ccd="' + ccd.id + '" data-x="' + ccd.x + '" data-y="' + ccd.y + '" data-rot="' + pinAngle(ccd.id) + '" data-lit="' + lit + '" data-selected="' + selected + '" tabindex="0" role="button" aria-label="' + ccd.nombre + (lit ? ', con víctimas en esta causa' : '') + '">' +
+        '<g class="map-marker' + ((lit && !lighting) ? ' vid-on' : '') + '" data-ccd="' + ccd.id + '" data-x="' + ccd.x + '" data-y="' + ccd.y + '" data-rot="' + pinAngle(ccd.id) + '" data-lit="' + lit + '" data-selected="' + selected + '" tabindex="0" role="button" aria-label="' + ccd.nombre + (lit ? ', con víctimas en esta causa' : '') + '">' +
           '<circle class="hit" cx="' + ccd.x + '" cy="' + (ccd.y - 60 * mapView.pin) + '" r="' + Math.max(48 * mapView.pin, 22 / mapView.k).toFixed(1) + '" fill="transparent"/>' +
           '<g class="pin-body" transform="' + pinTransform(ccd.x, ccd.y, selected, pinAngle(ccd.id)) + '">' +
             '<path class="pin-shadow" transform="translate(3 4)" d="' + PIN_PATH + '" fill="#000" fill-opacity=".55" filter="url(#softShadow)"/>' +
@@ -2310,7 +2301,7 @@
       lightTimers.push(setTimeout(function(){
         var path = node.querySelector('.pin-path');
         if (path) path.style.fill = 'var(--accent-bright)';
-        node.classList.add('lighting');
+        node.classList.add('lighting', 'vid-on');
       }, 560 + k * 90));
     });
   }
@@ -2435,7 +2426,7 @@
     var pl = document.getElementById('popupPlay'), lk = document.getElementById('popupLock');
     pl.hidden = !unlocked;  lk.hidden = !(hasVid && !unlocked);
     pl.setAttribute('data-ccd', ccdId);
-    document.getElementById('popupPlayLabel').textContent = watched[ccdId] ? 'Ver de nuevo' : 'Ver testimonio';
+    document.getElementById('popupPlayLabel').textContent = watched[ccdId] ? 'Ver de nuevo' : 'Ver microdocumental';
 
     el.popupVictims.innerHTML = '';
     var rows = getShuffledVictims(ccdId);
@@ -2667,7 +2658,7 @@
   function openVideo(ccdId){
     var ccd = CCDS.filter(function(c){ return c.id === ccdId; })[0];
     if (!ccd) return;
-    document.getElementById('videoTitle').innerHTML = '<small>Testimonio</small>' + ccd.nombre;
+    document.getElementById('videoTitle').innerHTML = '<small>Microdocumental</small>' + ccd.nombre;
     videoEl.poster = ccd.imagen || '';
     videoEl.src = 'assets/video/sitios/' + ccdId + '.mp4';
     videoIsOpen = true;
